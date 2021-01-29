@@ -1,7 +1,7 @@
 {
-  "name": "dypouch",
+  "name": "dynamo-couch-fuse",
   "version": "0.0.1",
-  "description": "Dypouch",
+  "description": "dynamo-couch-fuse",
   "esnext": "dist-src/index.js",
   "main": "dist-dist/index.js",
   "types": "dist-types/index.d.ts",
@@ -17,15 +17,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/genbliz/dypouch.git"
+    "url": "git+https://github.com/genbliz/dynamo-couch-fuse.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/genbliz/dypouch/issues"
+    "url": "https://github.com/genbliz/dynamo-couch-fuse/issues"
   },
-  "homepage": "https://github.com/genbliz/dypouch#readme",
+  "homepage": "https://github.com/genbliz/dynamo-couch-fuse#readme",
   "files": [
     "dist-*/"
   ],
