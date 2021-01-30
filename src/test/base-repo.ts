@@ -1,6 +1,5 @@
 import { ISecondaryIndexDef } from "../types";
-import DynamoDataOpr from "../dynamo/dynamo-data-operation";
-import { MyDynamoConnection } from "../test/connection";
+import { FuseDataOperationDynamo, FuseInitializerDynamo } from "../";
 import Joi from "joi";
 
 interface IBaseRepoOptions<T> {
@@ -9,10 +8,10 @@ interface IBaseRepoOptions<T> {
   secondaryIndexOptions: ISecondaryIndexDef<T>[];
 }
 
-export abstract class BaseRepository<T> extends DynamoDataOpr<T> {
+export abstract class BaseRepository<T> extends FuseDataOperationDynamo<T> {
   constructor({ schemaSubDef, secondaryIndexOptions, featureEntityValue }: IBaseRepoOptions<T>) {
     super({
-      dynamoDbClient: () => MyDynamoConnection.dynamoDbClientInst(),
+      dynamoDb: () => new FuseInitializerDynamo({ region: "" }),
       baseTableName: "hospiman_table_db1",
       schemaDef: { ...schemaSubDef },
       secondaryIndexOptions,

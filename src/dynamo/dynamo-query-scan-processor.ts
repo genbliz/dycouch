@@ -2,9 +2,9 @@ import type { IDynamoPagingResult } from "../types";
 import { LoggingService } from "../helpers/logging-service";
 import type { DynamoDB, QueryInput, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
 
-export abstract class DynamoQueryScanProcessor {
+export class DynamoQueryScanProcessor {
   //
-  protected async ddo__helperDynamoQueryProcessor<T>({
+  async fuse__helperDynamoQueryProcessor<T>({
     evaluationLimit,
     params,
     pageSize,

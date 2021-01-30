@@ -34,7 +34,7 @@ function hasQueryConditionKey(key: string) {
 const getRandom = () =>
   [Math.round(Math.random() * 99999), Math.round(Math.random() * 88888), Math.round(Math.random() * 99)].join("");
 
-export abstract class DynamoFilterQueryOperation {
+export class DynamoFilterQueryOperation {
   private operation__filterFieldExist({ fieldName }: { fieldName: string }): IQueryConditions {
     const attrKeyHash = `#attrKey1${getRandom()}`.toLowerCase();
     const result = {
@@ -57,7 +57,7 @@ export abstract class DynamoFilterQueryOperation {
     return result;
   }
 
-  protected ddo__helperFilterBasic({
+  fuse__helperFilterBasic({
     fieldName,
     val,
     conditionExpr,
@@ -226,7 +226,7 @@ export abstract class DynamoFilterQueryOperation {
         if (hasQueryConditionKey(conditionKey)) {
           const conditionExpr = conditionKeyMap[conditionKey];
           if (conditionExpr) {
-            const _queryConditions = this.ddo__helperFilterBasic({
+            const _queryConditions = this.fuse__helperFilterBasic({
               fieldName: fieldName,
               val: _conditionObjValue,
               conditionExpr: conditionExpr,
@@ -240,7 +240,7 @@ export abstract class DynamoFilterQueryOperation {
   }
 
   private operation_translateBasicQueryOperation({ fieldName, queryObject }: { fieldName: string; queryObject: any }) {
-    const _queryConditions = this.ddo__helperFilterBasic({
+    const _queryConditions = this.fuse__helperFilterBasic({
       fieldName: fieldName,
       val: queryObject,
       conditionExpr: "=",
@@ -248,7 +248,7 @@ export abstract class DynamoFilterQueryOperation {
     return _queryConditions;
   }
 
-  protected ddo__helperDynamoFilterOperation({
+  fuse__helperDynamoFilterOperation({
     queryDefs,
     projectionFields,
   }: {

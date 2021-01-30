@@ -1,14 +1,14 @@
+import { RepoModel } from "../model/repo-model";
 import type {
   IDynamoQueryParamOptions,
   ISecondaryIndexDef,
   IFieldCondition,
   IDynamoQuerySecondayIndexOptions,
 } from "../types";
-import { GenericDataError } from "./../helpers/errors";
+import { FuseErrorUtils, GenericDataError } from "./../helpers/errors";
 import type {
   DynamoDB,
   PutItemInput,
-  GetItemCommandInput,
   DeleteItemInput,
   WriteRequest,
   BatchWriteItemInput,
@@ -16,19 +16,21 @@ import type {
   BatchGetItemInput,
   AttributeValue,
   BatchGetItemOutput,
+  GetItemCommandInput,
 } from "@aws-sdk/client-dynamodb";
 import Joi from "joi";
 import { Marshaller } from "@aws/dynamodb-auto-marshaller";
 import { getJoiValidationErrors } from "../helpers/base-joi-helper";
-import BaseMixins from "./base-mixins";
 import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
 import { DynamoManageTable } from "./dynamo-manage-table";
 import { LoggingService } from "../helpers/logging-service";
 import { DynamoInitializer } from "./dynamo-initializer";
+import { DynamoFilterQueryOperation } from "./dynamo-filter-query-operation";
+import { DynamoQueryScanProcessor } from "./dynamo-query-scan-processor";
 
 interface IDynamoOptions<T> {
   schemaDef: Joi.SchemaMap;
-  dynamoDb: DynamoInitializer;
+  dynamoDb: () => DynamoInitializer;
   dataKeyGenerator: () => string;
   featureEntityValue: string;
   secondaryIndexOptions: ISecondaryIndexDef<T>[];
@@ -42,11 +44,11 @@ function createTenantSchema(schemaMapDef: Joi.SchemaMap) {
 
 type IModelKeys = keyof IDynamoDataCoreEntityModel;
 
-export default abstract class DynamoDataOperation<T> extends BaseMixins {
+export default abstract class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly here_partitionKeyFieldName: IModelKeys = "id";
   private readonly here_sortKeyFieldName: IModelKeys = "featureEntity";
   //
-  private readonly here_dynamoDb: DynamoInitializer;
+  private readonly here_dynamoDb: () => DynamoInitializer;
   private readonly here_dataKeyGenerator: () => string;
   private readonly here_schema: Joi.Schema;
   private readonly here_marshaller: Marshaller;
@@ -54,6 +56,9 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
   private readonly here_strictRequiredFields: string[];
   private readonly here_featureEntityValue: string;
   private readonly here_secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  private readonly queryFilter: DynamoFilterQueryOperation;
+  private readonly queryScanProcessor: DynamoQueryScanProcessor;
+  private readonly errorHelper: FuseErrorUtils;
   //
   private here_tableManager!: DynamoManageTable<T>;
 
@@ -75,9 +80,12 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     this.here_featureEntityValue = featureEntityValue;
     this.here_secondaryIndexOptions = secondaryIndexOptions;
     this.here_strictRequiredFields = strictRequiredFields as string[];
+    this.queryFilter = new DynamoFilterQueryOperation();
+    this.queryScanProcessor = new DynamoQueryScanProcessor();
+    this.errorHelper = new FuseErrorUtils();
   }
 
-  protected ddo_tableManager() {
+  protected fuse_tableManager() {
     if (!this.here_tableManager) {
       this.here_tableManager = new DynamoManageTable<T>({
         dynamoDb: () => this._dynamoDb(),
@@ -91,7 +99,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
   }
 
   private _dynamoDb(): DynamoDB {
-    return this.here_dynamoDb.getInstance();
+    return this.here_dynamoDb().getInstance();
   }
 
   private _generateDynamoTableKey() {
@@ -141,7 +149,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     }
   }
 
-  protected async ddo_createOne({ data }: { data: T }) {
+  protected async fuse_createOne({ data }: { data: T }) {
     this._checkValidateStrictRequiredFields(data);
 
     const { tableFullName, partitionKeyFieldName } = this._getLocalVariables();
@@ -177,7 +185,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return true;
   }
 
-  protected async ddo_getOneById({
+  protected async fuse_getOneById({
     dataId,
     withCondition,
   }: {
@@ -192,7 +200,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       tableFullName,
     } = this._getLocalVariables();
 
-    this.allHelpValidateRequiredString({
+    this.errorHelper.fuse_helper_validateRequiredString({
       QueryGetOnePartitionKey: dataId,
       QueryGetOneSortKey: featureEntityValue,
     });
@@ -216,7 +224,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return item;
   }
 
-  protected async ddo_updateOneDirect({ data }: { data: T }) {
+  protected async fuse_updateOneDirect({ data }: { data: T }) {
     this._checkValidateStrictRequiredFields(data);
 
     const { tableFullName, partitionKeyFieldName } = this._getLocalVariables();
@@ -245,7 +253,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return result;
   }
 
-  protected async ddo_updateOneById({
+  protected async fuse_updateOneById({
     dataId,
     data,
     withCondition,
@@ -258,12 +266,12 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
     const { tableFullName, partitionKeyFieldName } = this._getLocalVariables();
 
-    this.allHelpValidateRequiredString({ Update1DataId: dataId });
+    this.errorHelper.fuse_helper_validateRequiredString({ Update1DataId: dataId });
 
-    const dataInDb = await this.ddo_getOneById({ dataId });
+    const dataInDb = await this.fuse_getOneById({ dataId });
 
     if (!(dataInDb && dataInDb[partitionKeyFieldName])) {
-      throw this.allHelpCreateFriendlyError("Data does NOT exists");
+      throw this.errorHelper.fuse_helper_createFriendlyError("Data does NOT exists");
     }
 
     const isPassed = this._withConditionPassed({
@@ -299,7 +307,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
     if (error) {
       const msg = getJoiValidationErrors(error) ?? "Validation error occured";
-      throw this.allHelpCreateFriendlyError(msg);
+      throw this.errorHelper.fuse_helper_createFriendlyError(msg);
     }
     const marshalledData: any = this.here_marshaller.marshallItem(value);
 
@@ -313,16 +321,16 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return Array.from(new Set([...strArray]));
   }
 
-  protected async ddo_getManyByCondition(paramOptions: IDynamoQueryParamOptions<T>) {
+  protected async fuse_getManyByCondition(paramOptions: IDynamoQueryParamOptions<T>) {
     paramOptions.pagingParams = undefined;
-    const result = await this.ddo_getManyByConditionPaginate(paramOptions);
+    const result = await this.fuse_getManyByConditionPaginate(paramOptions);
     if (result?.mainResult?.length) {
       return result.mainResult;
     }
     return [];
   }
 
-  protected async ddo_getManyByConditionPaginate(paramOptions: IDynamoQueryParamOptions<T>) {
+  protected async fuse_getManyByConditionPaginate(paramOptions: IDynamoQueryParamOptions<T>) {
     const { tableFullName, sortKeyFieldName, partitionKeyFieldName } = this._getLocalVariables();
     //
     if (!paramOptions?.partitionKeyQuery?.equals === undefined) {
@@ -347,7 +355,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
     const fieldKeys = paramOptions?.fields?.length ? this._removeDuplicateString(paramOptions.fields) : undefined;
 
-    const filterHashSortKey = this.ddo__helperDynamoFilterOperation({
+    const filterHashSortKey = this.queryFilter.fuse__helperDynamoFilterOperation({
       queryDefs: {
         ...sortKeyQuery,
         ...{
@@ -362,7 +370,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     let otherExpressionAttributeValues: any = undefined;
     let otherExpressionAttributeNames: any = undefined;
     if (paramOptions?.query) {
-      const filterOtherAttr = this.ddo__helperDynamoFilterOperation({
+      const filterOtherAttr = this.queryFilter.fuse__helperDynamoFilterOperation({
         queryDefs: paramOptions.query,
         projectionFields: null,
       });
@@ -400,7 +408,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     const hashKeyAndSortKey: [string, string] = [partitionKeyFieldName, sortKeyFieldName];
 
     const paginationObjects = { ...paramOptions.pagingParams };
-    const result = await this.ddo__helperDynamoQueryProcessor<T>({
+    const result = await this.queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
       dynamoDb: () => this._dynamoDb(),
       params,
       hashKeyAndSortKey,
@@ -409,7 +417,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return result;
   }
 
-  protected async ddo_batchGetManyByIds({
+  protected async fuse_batchGetManyByIds({
     dataIds,
     fields,
     withCondition,
@@ -419,7 +427,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     withCondition?: IFieldCondition<T>;
   }) {
     dataIds.forEach((dataId) => {
-      this.allHelpValidateRequiredString({
+      this.errorHelper.fuse_helper_validateRequiredString({
         BatchGetDataId: dataId,
       });
     });
@@ -582,18 +590,18 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     });
   }
 
-  protected async ddo_getSecondaryIndex<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyByIndex<TData = T, TSortKeyField = string>(
     paramOption: IDynamoQuerySecondayIndexOptions<TData, TSortKeyField>,
   ) {
     paramOption.pagingParams = undefined;
-    const result = await this.ddo_getSecondaryIndexPaginate<TData, TSortKeyField>(paramOption);
+    const result = await this.fuse_getManyByIndexPaginate<TData, TSortKeyField>(paramOption);
     if (result?.mainResult) {
       return result.mainResult;
     }
     return [];
   }
 
-  protected async ddo_getSecondaryIndexPaginate<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IDynamoQuerySecondayIndexOptions<TData, TSortKeyField>,
   ) {
     const { tableFullName, secondaryIndexOptions } = this._getLocalVariables();
@@ -637,7 +645,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       filterExpression,
       projectionExpressionAttr,
       expressionAttributeNames,
-    } = this.ddo__helperDynamoFilterOperation({
+    } = this.queryFilter.fuse__helperDynamoFilterOperation({
       queryDefs: partitionSortKeyQuery,
       projectionFields: fieldKeys,
     });
@@ -646,7 +654,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     let otherExpressionAttributeValues: any = undefined;
     let otherExpressionAttributeNames: any = undefined;
     if (query) {
-      const otherAttr = this.ddo__helperDynamoFilterOperation({
+      const otherAttr = this.queryFilter.fuse__helperDynamoFilterOperation({
         queryDefs: query,
         projectionFields: null,
       });
@@ -686,7 +694,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
     const hashKeyAndSortKey: [string, string] = [partitionKeyFieldName, sortKeyFieldName];
 
-    const result = await this.ddo__helperDynamoQueryProcessor<T>({
+    const result = await this.queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
       dynamoDb: () => this._dynamoDb(),
       params,
       orderDesc,
@@ -696,7 +704,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return result;
   }
 
-  protected async ddo_deleteById({
+  protected async fuse_deleteById({
     dataId,
     withCondition,
   }: {
@@ -704,13 +712,13 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     withCondition?: IFieldCondition<T>;
   }): Promise<T> {
     //
-    this.allHelpValidateRequiredString({ Del1SortKey: dataId });
+    this.errorHelper.fuse_helper_validateRequiredString({ Del1SortKey: dataId });
     const { tableFullName, partitionKeyFieldName, sortKeyFieldName, featureEntityValue } = this._getLocalVariables();
 
-    const dataExist = await this.ddo_getOneById({ dataId, withCondition });
+    const dataExist = await this.fuse_getOneById({ dataId, withCondition });
 
     if (!(dataExist && dataExist[partitionKeyFieldName])) {
-      throw this.allHelpCreateFriendlyError("Record does NOT exists");
+      throw this.errorHelper.fuse_helper_createFriendlyError("Record does NOT exists");
     }
 
     const params: DeleteItemInput = {
@@ -725,9 +733,9 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       await this._dynamoDb().deleteItem(params);
     } catch (err) {
       if (err && err.code === "ResourceNotFoundException") {
-        throw this.allHelpCreateFriendlyError("Table not found");
+        throw this.errorHelper.fuse_helper_createFriendlyError("Table not found");
       } else if (err && err.code === "ResourceInUseException") {
-        throw this.allHelpCreateFriendlyError("Table in use");
+        throw this.errorHelper.fuse_helper_createFriendlyError("Table in use");
       } else {
         throw err;
       }
@@ -735,11 +743,11 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return dataExist;
   }
 
-  protected async ddo_deleteManyDangerouselyByIds({ dataIds }: { dataIds: string[] }): Promise<boolean> {
+  protected async fuse_deleteManyDangerouselyByIds({ dataIds }: { dataIds: string[] }): Promise<boolean> {
     //
     const dataIdsNoDuplicates = this._removeDuplicateString(dataIds);
     dataIdsNoDuplicates.forEach((sortKeyValue) => {
-      this.allHelpValidateRequiredString({
+      this.errorHelper.fuse_helper_validateRequiredString({
         DelSortKey: sortKeyValue,
       });
     });

@@ -1,6 +1,6 @@
 import { BaseRepository } from "./base-repo";
 import Joi from "joi";
-import { IQueryDefinition } from "src/types";
+import { IFuseQueryDefinition } from "../";
 
 export interface IPayment {
   amount: number;
@@ -17,7 +17,7 @@ export interface IPayment {
 
 const _searchTerm = "";
 
-export const paramOptions: IQueryDefinition<IPayment> = {
+export const paramOptions: IFuseQueryDefinition<IPayment> = {
   $or: [
     { amount: { $contains: _searchTerm } },
     { category: { $contains: _searchTerm } },
@@ -36,10 +36,12 @@ const schemaSubDef = {
 };
 
 const getRandom = () =>
-  [Math.round(Math.random() * 99999), Math.round(Math.random() * 88), Math.round(Math.random() * 99)].reduce(
-    (prev, cur) => prev + cur,
-    0,
-  );
+  [
+    //
+    Math.round(Math.random() * 99999),
+    Math.round(Math.random() * 88),
+    Math.round(Math.random() * 99),
+  ].reduce((prev, cur) => prev + cur, 0);
 
 class MyRepositoryBase extends BaseRepository<IPayment> {
   constructor() {
@@ -51,7 +53,7 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
   }
 
   getIt() {
-    return this.ddo_getManyByCondition({
+    return this.fuse_getManyByCondition({
       partitionKeyQuery: {
         equals: 0,
       },
@@ -64,7 +66,7 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
   }
 
   async create() {
-    await this.ddo_updateOneById({
+    await this.fuse_updateOneById({
       dataId: "",
       data: {
         amount: getRandom(),
