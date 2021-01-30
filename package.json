@@ -1,7 +1,7 @@
 {
-  "name": "dynamo-couch-fuse",
+  "name": "fuse-dynamo-couch",
   "version": "0.0.1",
-  "description": "dynamo-couch-fuse",
+  "description": "fuse-dynamo-couch",
   "esnext": "dist-src/index.js",
   "main": "dist-dist/index.js",
   "types": "dist-types/index.d.ts",
@@ -17,15 +17,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/genbliz/dynamo-couch-fuse.git"
+    "url": "git+https://github.com/genbliz/fuse-dynamo-couch.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/genbliz/dynamo-couch-fuse/issues"
+    "url": "https://github.com/genbliz/fuse-dynamo-couch/issues"
   },
-  "homepage": "https://github.com/genbliz/dynamo-couch-fuse#readme",
+  "homepage": "https://github.com/genbliz/fuse-dynamo-couch#readme",
   "files": [
     "dist-*/"
   ],
