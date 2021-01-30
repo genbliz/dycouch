@@ -2,7 +2,7 @@ class LoggingServiceBase {
   private mode: boolean;
 
   constructor() {
-    const mode = process.env.DYNAMODB_DATA_OPERATION_DEBUG_MODE;
+    const mode = process.env.DYNAMO_COUCH_FUSE_DEBUG_MODE;
     if (mode === "true") {
       this.mode = true;
     } else {

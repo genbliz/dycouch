@@ -1,4 +1,4 @@
-export {
+export type {
   IDynamoQuerySecondayIndexOptions,
   IDynamoQueryParamOptions,
   ISecondaryIndexDef,
@@ -11,7 +11,8 @@ export {
 } from "./types";
 export { IDynamoDataCoreEntityModel } from "./core/base-schema";
 export { GenericDataError, GenericFriendlyError } from "./helpers/errors";
-import DynamoDataOp from "./core/dynamo-data-operation";
+import DynamoDataOp from "./dynamo/dynamo-data-operation";
+export { DynamoInitializer } from "./dynamo/dynamo-initializer";
 
 export const DynamoDataOperation = DynamoDataOp;
 export default DynamoDataOp;

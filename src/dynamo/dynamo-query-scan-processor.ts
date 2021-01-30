@@ -1,7 +1,6 @@
-import type { DynamoDB, AWSError } from "aws-sdk";
 import type { IDynamoPagingResult } from "../types";
-import type { DocumentClient } from "aws-sdk/clients/dynamodb";
 import { LoggingService } from "../helpers/logging-service";
+import type { DynamoDB, QueryInput, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
 
 export abstract class DynamoQueryScanProcessor {
   //
@@ -12,18 +11,18 @@ export abstract class DynamoQueryScanProcessor {
     lastKeyHash,
     orderDesc,
     hashKeyAndSortKey,
-    dynamoDbClient,
+    dynamoDb,
   }: {
-    dynamoDbClient: () => DocumentClient;
+    dynamoDb: () => DynamoDB;
     evaluationLimit?: number;
-    params: DynamoDB.QueryInput;
+    params: QueryInput;
     pageSize?: number;
     lastKeyHash?: any;
     orderDesc?: boolean;
     hashKeyAndSortKey: [string, string];
   }) {
     return await this.__helperDynamoQueryScanProcessor<T>({
-      dynamoDbClient,
+      dynamoDb,
       operation: "query",
       evaluationLimit,
       params,
@@ -42,12 +41,12 @@ export abstract class DynamoQueryScanProcessor {
     lastKeyHash,
     orderDesc,
     hashKeyAndSortKey,
-    dynamoDbClient,
+    dynamoDb,
   }: {
-    dynamoDbClient: () => DocumentClient;
+    dynamoDb: () => DynamoDB;
     operation: "query" | "scan";
     evaluationLimit?: number;
-    params: DynamoDB.QueryInput;
+    params: QueryInput;
     pageSize?: number;
     lastKeyHash?: any;
     orderDesc?: boolean;
@@ -57,7 +56,8 @@ export abstract class DynamoQueryScanProcessor {
     const xMinEvaluationLimit = 5;
     const xMaxEvaluationLimit = 500;
 
-    type IResult = DynamoDB.QueryOutput | DynamoDB.ScanOutput;
+    type IResult = QueryCommandOutput | ScanCommandOutput | undefined;
+    // type IResult = QueryCommandOutput;
 
     LoggingService.log({
       processorParamsInit: {
@@ -97,9 +97,9 @@ export abstract class DynamoQueryScanProcessor {
         }
       }
 
-      const queryScanUntilDone = (err: AWSError, data: IResult) => {
+      const queryScanUntilDone = (err: any, data: IResult) => {
         if (err) {
-          LoggingService.log(err, err.stack);
+          LoggingService.log(err, err?.stack);
           if (returnedItems?.length) {
             resolve({ mainResult: returnedItems });
           } else {
@@ -121,14 +121,14 @@ export abstract class DynamoQueryScanProcessor {
               mainResult: returnedItems,
             };
 
-            if (data.LastEvaluatedKey && Object.keys(data.LastEvaluatedKey).length) {
+            if (data?.LastEvaluatedKey && Object.keys(data.LastEvaluatedKey).length) {
               const lastKeyHash = this.__encodeLastKey(data.LastEvaluatedKey);
               scanResult.lastKeyHash = lastKeyHash;
             }
             resolve(scanResult);
           } else if (
             //
-            data.LastEvaluatedKey &&
+            data?.LastEvaluatedKey &&
             Object.keys(data.LastEvaluatedKey).length
           ) {
             //
@@ -142,7 +142,15 @@ export abstract class DynamoQueryScanProcessor {
               dynamoProcessorParams: _paramsDef,
             });
 
-            dynamoDbClient()[operation](_paramsDef, queryScanUntilDone);
+            if (operation === "scan") {
+              dynamoDb().scan(_paramsDef, (err: any, resultData: any) => {
+                queryScanUntilDone(err, resultData);
+              });
+            } else {
+              dynamoDb().query(_paramsDef, (err, resultData) => {
+                queryScanUntilDone(err, resultData);
+              });
+            }
           } else {
             resolve({ mainResult: returnedItems });
           }
@@ -163,7 +171,15 @@ export abstract class DynamoQueryScanProcessor {
         _params["ScanIndexForward"] = false;
       }
       LoggingService.log({ operation, dynamoProcessorParams: _params });
-      dynamoDbClient()[operation](_params, queryScanUntilDone);
+      if (operation === "scan") {
+        dynamoDb().scan(params, (err: any, resultData: any) => {
+          queryScanUntilDone(err, resultData);
+        });
+      } else {
+        dynamoDb().query(params, (err, resultData) => {
+          queryScanUntilDone(err, resultData);
+        });
+      }
     });
   }
 

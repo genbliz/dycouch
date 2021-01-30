@@ -1,7 +1,16 @@
 import { ISecondaryIndexDef } from "../types";
 import { UtilService } from "../helpers/util-service";
 import { LoggingService } from "../helpers/logging-service";
-import { DynamoDB } from "aws-sdk";
+import type {
+  DescribeTableInput,
+  DynamoDB,
+  ListTablesInput,
+  TableDescription,
+  UpdateTableInput,
+  UpdateTimeToLiveInput,
+  CreateTableInput,
+  ProjectionType,
+} from "@aws-sdk/client-dynamodb";
 
 interface IDynamoOptions<T> {
   dynamoDb: () => DynamoDB;
@@ -47,24 +56,24 @@ export class DynamoManageTable<T> {
   }
 
   async ddo_tbl_getListOfTablesNamesOnline() {
-    const params: DynamoDB.ListTablesInput = {
+    const params: ListTablesInput = {
       Limit: 99,
     };
-    const listOfTables = await this._tbl_dynamoDb().listTables(params).promise();
+    const listOfTables = await this._tbl_dynamoDb().listTables(params);
     return listOfTables?.TableNames;
   }
 
   async ddo_tbl_tableSettingUpdateTTL({ attrName, isEnabled }: { attrName: keyof T; isEnabled: boolean }) {
     const { tableFullName } = this._tbl_getLocalVariables();
 
-    const params: DynamoDB.Types.UpdateTimeToLiveInput = {
+    const params: UpdateTimeToLiveInput = {
       TableName: tableFullName,
       TimeToLiveSpecification: {
         AttributeName: attrName as string,
         Enabled: isEnabled,
       },
     };
-    const result = await this._tbl_dynamoDb().updateTimeToLive(params).promise();
+    const result = await this._tbl_dynamoDb().updateTimeToLive(params);
     if (result?.TimeToLiveSpecification) {
       return result.TimeToLiveSpecification;
     }
@@ -75,10 +84,10 @@ export class DynamoManageTable<T> {
     try {
       const { tableFullName } = this._tbl_getLocalVariables();
 
-      const params: DynamoDB.DescribeTableInput = {
+      const params: DescribeTableInput = {
         TableName: tableFullName,
       };
-      const result = await this._tbl_dynamoDb().describeTable(params).promise();
+      const result = await this._tbl_dynamoDb().describeTable(params);
       if (result?.Table?.TableName === tableFullName) {
         return result.Table;
       }
@@ -105,15 +114,15 @@ export class DynamoManageTable<T> {
     existingTableInfo,
   }: {
     secondaryIndexOptions: ISecondaryIndexDef<T>[];
-    existingTableInfo: DynamoDB.TableDescription;
-  }): Promise<DynamoDB.TableDescription[] | null> {
+    existingTableInfo: TableDescription;
+  }): Promise<TableDescription[] | null> {
     try {
       const existingIndexNames: string[] = [];
       const staledIndexNames: string[] = [];
       const allIndexNames: string[] = [];
       const newSecondaryIndexOptions: ISecondaryIndexDef<T>[] = [];
 
-      const updateResults: DynamoDB.TableDescription[] = [];
+      const updateResults: TableDescription[] = [];
 
       if (existingTableInfo?.GlobalSecondaryIndexes?.length) {
         existingTableInfo?.GlobalSecondaryIndexes.forEach((indexInfo) => {
@@ -157,7 +166,7 @@ export class DynamoManageTable<T> {
         canUpdate = true;
         let indexCount = 0;
         for (const indexOption of newSecondaryIndexOptions) {
-          const params: DynamoDB.UpdateTableInput = {
+          const params: UpdateTableInput = {
             TableName: tableFullName,
             GlobalSecondaryIndexUpdates: [],
           };
@@ -179,15 +188,18 @@ export class DynamoManageTable<T> {
             });
           });
 
-          const result = await this._tbl_dynamoDb().updateTable(params).promise();
+          const result = await this._tbl_dynamoDb().updateTable(params);
           if (result?.TableDescription) {
             updateResults.push(result?.TableDescription);
           }
 
           LoggingService.log(
-            [`Creating Index: '${indexName}'`, `on table '${tableFullName}' started:`, new Date().toTimeString()].join(
-              " ",
-            ),
+            [
+              //
+              `Creating Index: '${indexName}'`,
+              `on table '${tableFullName}' started:`,
+              new Date().toTimeString(),
+            ].join(" "),
           );
 
           if (indexCount !== newSecondaryIndexOptions.length) {
@@ -204,7 +216,7 @@ export class DynamoManageTable<T> {
         let indexCount = 0;
 
         for (const indexName of staledIndexNames) {
-          const params: DynamoDB.UpdateTableInput = {
+          const params: UpdateTableInput = {
             TableName: tableFullName,
             GlobalSecondaryIndexUpdates: [],
           };
@@ -217,15 +229,18 @@ export class DynamoManageTable<T> {
             },
           });
 
-          const result = await this._tbl_dynamoDb().updateTable(params).promise();
+          const result = await this._tbl_dynamoDb().updateTable(params);
           if (result?.TableDescription) {
             updateResults.push(result?.TableDescription);
           }
 
           LoggingService.log(
-            [`Deleting Index: '${indexName}'`, `on table '${tableFullName}' started:`, new Date().toTimeString()].join(
-              " ",
-            ),
+            [
+              //
+              `Deleting Index: '${indexName}'`,
+              `on table '${tableFullName}' started:`,
+              new Date().toTimeString(),
+            ].join(" "),
           );
 
           if (indexCount !== staledIndexNames.length) {
@@ -282,7 +297,7 @@ export class DynamoManageTable<T> {
     secondaryIndexOptions: ISecondaryIndexDef<T>[];
   }) {
     const { tableFullName } = this._tbl_getLocalVariables();
-    const params: DynamoDB.CreateTableInput = {
+    const params: CreateTableInput = {
       KeySchema: [], //  make linter happy
       AttributeDefinitions: [],
       TableName: tableFullName,
@@ -314,7 +329,7 @@ export class DynamoManageTable<T> {
       }
 
       let projectionFields = (projectionFieldsInclude || []) as string[];
-      let projectionType: AWS.DynamoDB.ProjectionType = "ALL";
+      let projectionType: ProjectionType = "ALL";
 
       if (projectionFields?.length) {
         // remove frimary keys from include
@@ -362,7 +377,7 @@ export class DynamoManageTable<T> {
       secondaryIndexOptions,
     } = this._tbl_getLocalVariables();
 
-    const params: DynamoDB.CreateTableInput = {
+    const params: CreateTableInput = {
       AttributeDefinitions: [
         {
           AttributeName: partitionKeyFieldName,
@@ -403,11 +418,11 @@ export class DynamoManageTable<T> {
         secondaryIndexOptions,
       });
       if (creationParams.xAttributeDefinitions?.length) {
-        const existAttrDefNames = params.AttributeDefinitions.map((def) => def.AttributeName);
+        const existAttrDefNames = params.AttributeDefinitions?.map((def) => def.AttributeName);
         creationParams.xAttributeDefinitions.forEach((def) => {
-          const alreadyDefined = existAttrDefNames.includes(def.AttributeName);
+          const alreadyDefined = existAttrDefNames?.includes(def.AttributeName);
           if (!alreadyDefined) {
-            params.AttributeDefinitions.push(def);
+            params.AttributeDefinitions?.push(def);
           }
         });
       }
@@ -418,7 +433,7 @@ export class DynamoManageTable<T> {
       "@allCreateTableBase, table: ": tableFullName,
     });
 
-    const result = await this._tbl_dynamoDb().createTable(params).promise();
+    const result = await this._tbl_dynamoDb().createTable(params);
 
     if (result?.TableDescription) {
       LoggingService.log(
@@ -436,7 +451,7 @@ export class DynamoManageTable<T> {
   async ddo_tbl_deleteGlobalSecondaryIndex(indexName: string) {
     const { tableFullName } = this._tbl_getLocalVariables();
 
-    const params: DynamoDB.UpdateTableInput = {
+    const params: UpdateTableInput = {
       TableName: tableFullName,
       GlobalSecondaryIndexUpdates: [
         {
@@ -446,7 +461,7 @@ export class DynamoManageTable<T> {
         },
       ],
     };
-    const result = await this._tbl_dynamoDb().updateTable(params).promise();
+    const result = await this._tbl_dynamoDb().updateTable(params);
     if (result?.TableDescription) {
       return result.TableDescription;
     }

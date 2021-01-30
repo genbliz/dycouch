@@ -5,20 +5,30 @@ import type {
   IDynamoQuerySecondayIndexOptions,
 } from "../types";
 import { GenericDataError } from "./../helpers/errors";
-import type { DynamoDB } from "aws-sdk";
-import type { DocumentClient } from "aws-sdk/clients/dynamodb";
+import type {
+  DynamoDB,
+  PutItemInput,
+  GetItemCommandInput,
+  DeleteItemInput,
+  WriteRequest,
+  BatchWriteItemInput,
+  QueryInput,
+  BatchGetItemInput,
+  AttributeValue,
+  BatchGetItemOutput,
+} from "@aws-sdk/client-dynamodb";
 import Joi from "joi";
 import { Marshaller } from "@aws/dynamodb-auto-marshaller";
-import { getJoiValidationErrors } from "../core/base-joi-helper";
-import BaseMixins from "../core/base-mixins";
-import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "./base-schema";
+import { getJoiValidationErrors } from "../helpers/base-joi-helper";
+import BaseMixins from "./base-mixins";
+import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
 import { DynamoManageTable } from "./dynamo-manage-table";
 import { LoggingService } from "../helpers/logging-service";
+import { DynamoInitializer } from "./dynamo-initializer";
 
 interface IDynamoOptions<T> {
-  dynamoDb: () => DynamoDB;
   schemaDef: Joi.SchemaMap;
-  dynamoDbClient: () => DocumentClient;
+  dynamoDb: DynamoInitializer;
   dataKeyGenerator: () => string;
   featureEntityValue: string;
   secondaryIndexOptions: ISecondaryIndexDef<T>[];
@@ -36,8 +46,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
   private readonly here_partitionKeyFieldName: IModelKeys = "id";
   private readonly here_sortKeyFieldName: IModelKeys = "featureEntity";
   //
-  private readonly here_dynamoDbClient: () => DocumentClient;
-  private readonly here_dynamoDb: () => DynamoDB;
+  private readonly here_dynamoDb: DynamoInitializer;
   private readonly here_dataKeyGenerator: () => string;
   private readonly here_schema: Joi.Schema;
   private readonly here_marshaller: Marshaller;
@@ -49,9 +58,8 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
   private here_tableManager!: DynamoManageTable<T>;
 
   constructor({
-    dynamoDb,
     schemaDef,
-    dynamoDbClient,
+    dynamoDb,
     secondaryIndexOptions,
     featureEntityValue,
     baseTableName,
@@ -60,11 +68,10 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
   }: IDynamoOptions<T>) {
     super();
     this.here_dynamoDb = dynamoDb;
-    this.here_dynamoDbClient = dynamoDbClient;
     this.here_dataKeyGenerator = dataKeyGenerator;
     this.here_schema = createTenantSchema(schemaDef);
     this.here_tableFullName = baseTableName;
-    this.here_marshaller = new Marshaller({ onEmpty: "omit" });
+    this.here_marshaller = new Marshaller({ onEmpty: "omit", onInvalid: "omit" });
     this.here_featureEntityValue = featureEntityValue;
     this.here_secondaryIndexOptions = secondaryIndexOptions;
     this.here_strictRequiredFields = strictRequiredFields as string[];
@@ -73,7 +80,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
   protected ddo_tableManager() {
     if (!this.here_tableManager) {
       this.here_tableManager = new DynamoManageTable<T>({
-        dynamoDb: this.here_dynamoDb,
+        dynamoDb: () => this._dynamoDb(),
         secondaryIndexOptions: this.here_secondaryIndexOptions,
         tableFullName: this.here_tableFullName,
         partitionKeyFieldName: this.here_partitionKeyFieldName,
@@ -83,12 +90,8 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     return this.here_tableManager;
   }
 
-  private _dynamoDbClient(): DocumentClient {
-    return this.here_dynamoDbClient();
-  }
-
   private _dynamoDb(): DynamoDB {
-    return this.here_dynamoDb();
+    return this.here_dynamoDb.getInstance();
   }
 
   private _generateDynamoTableKey() {
@@ -154,12 +157,12 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
     const { validatedData, marshalled } = await this._allHelpValidateMarshallAndGetValue(fullData);
 
-    const params: DocumentClient.PutItemInput = {
+    const params: PutItemInput = {
       TableName: tableFullName,
       Item: marshalled,
     };
 
-    await this._dynamoDb().putItem(params).promise();
+    await this._dynamoDb().putItem(params);
     const result: T = validatedData;
     return result;
   }
@@ -194,14 +197,14 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       QueryGetOneSortKey: featureEntityValue,
     });
 
-    const params: DocumentClient.GetItemInput = {
+    const params: GetItemCommandInput = {
       TableName: tableFullName,
       Key: {
-        [partitionKeyFieldName]: dataId,
-        [sortKeyFieldName]: featureEntityValue,
+        [partitionKeyFieldName]: { S: dataId },
+        [sortKeyFieldName]: { S: featureEntityValue },
       },
     };
-    const result = await this._dynamoDbClient().get(params).promise();
+    const result = await this._dynamoDb().getItem(params);
     const item = result.Item as any;
     if (!item) {
       return null;
@@ -230,12 +233,14 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     //
     const { validatedData, marshalled } = await this._allHelpValidateMarshallAndGetValue(fullData);
 
-    const params: DocumentClient.PutItemInput = {
+    LoggingService.log({ marshalled });
+
+    const params: PutItemInput = {
       TableName: tableFullName,
       Item: marshalled,
     };
 
-    await this._dynamoDb().putItem(params).promise();
+    await this._dynamoDb().putItem(params);
     const result: T = validatedData;
     return result;
   }
@@ -277,12 +282,12 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
     const { validatedData, marshalled } = await this._allHelpValidateMarshallAndGetValue(fullData);
 
-    const params: DocumentClient.PutItemInput = {
+    const params: PutItemInput = {
       TableName: tableFullName,
       Item: marshalled,
     };
 
-    await this._dynamoDb().putItem(params).promise();
+    await this._dynamoDb().putItem(params);
     const result: T = validatedData;
     return result;
   }
@@ -296,7 +301,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       const msg = getJoiValidationErrors(error) ?? "Validation error occured";
       throw this.allHelpCreateFriendlyError(msg);
     }
-    const marshalledData = this.here_marshaller.marshallItem(value);
+    const marshalledData: any = this.here_marshaller.marshallItem(value);
 
     return await Promise.resolve({
       validatedData: value,
@@ -370,7 +375,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       }
     }
 
-    const params: DocumentClient.QueryInput = {
+    const params: QueryInput = {
       TableName: tableFullName,
       KeyConditionExpression: filterHashSortKey.filterExpression,
       ExpressionAttributeValues: {
@@ -396,7 +401,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
     const paginationObjects = { ...paramOptions.pagingParams };
     const result = await this.ddo__helperDynamoQueryProcessor<T>({
-      dynamoDbClient: () => this._dynamoDbClient(),
+      dynamoDb: () => this._dynamoDb(),
       params,
       hashKeyAndSortKey,
       ...paginationObjects,
@@ -475,7 +480,9 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
 
       const dataIdsNoDup = this._removeDuplicateString(dataIds);
 
-      const getArray: DynamoDB.Key[] = dataIdsNoDup.map((dataId) => {
+      type IKey = Record<string, AttributeValue>;
+
+      const getArray: IKey[] = dataIdsNoDup.map((dataId) => {
         const params01 = {
           [partitionKeyFieldName]: { S: dataId },
           [sortKeyFieldName]: { S: featureEntityValue },
@@ -484,7 +491,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       });
 
       let projectionExpression: string | undefined = undefined;
-      let expressionAttributeNames: DynamoDB.ExpressionAttributeNameMap | undefined = undefined;
+      let expressionAttributeNames: Record<string, string> | undefined = undefined;
 
       if (fields?.length) {
         const fieldKeys = this._removeDuplicateString(fields);
@@ -513,7 +520,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
         }
       }
 
-      const params: DynamoDB.BatchGetItemInput = {
+      const params: BatchGetItemInput = {
         RequestItems: {
           [tableFullName]: {
             Keys: [...getArray],
@@ -537,12 +544,12 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
         return resultItems || [];
       };
 
-      const batchGetUntilDone = (err: AWS.AWSError, data: DynamoDB.BatchGetItemOutput) => {
+      const batchGetUntilDone = (err: any, data: BatchGetItemOutput | undefined) => {
         if (err) {
           if (returnedItems?.length) {
             resolve(resolveItemResults(returnedItems));
           } else {
-            reject(err.stack);
+            reject(err?.stack);
           }
         } else {
           if (data?.Responses) {
@@ -554,17 +561,24 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
           }
 
           if (data?.UnprocessedKeys && Object.keys(data.UnprocessedKeys).length) {
-            const _params: DynamoDB.BatchGetItemInput = {
+            const _params: BatchGetItemInput = {
               RequestItems: data.UnprocessedKeys,
             };
             LoggingService.log({ dynamoBatchGetParams: _params });
-            this._dynamoDb().batchGetItem(_params, batchGetUntilDone);
+            // this._dynamoDb().batchGetItem(_params, batchGetUntilDone);
+
+            this._dynamoDb().batchGetItem(params, (err, resultData) => {
+              batchGetUntilDone(err, resultData);
+            });
           } else {
             resolve(resolveItemResults(returnedItems));
           }
         }
       };
-      this._dynamoDb().batchGetItem(params, batchGetUntilDone);
+      // this._dynamoDb().batchGetItem(params, batchGetUntilDone);
+      this._dynamoDb().batchGetItem(params, (err, resultData) => {
+        batchGetUntilDone(err, resultData);
+      });
     });
   }
 
@@ -645,7 +659,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       }
     }
 
-    const params: DocumentClient.QueryInput = {
+    const params: QueryInput = {
       TableName: tableFullName,
       IndexName: indexName,
       KeyConditionExpression: filterExpression,
@@ -673,7 +687,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     const hashKeyAndSortKey: [string, string] = [partitionKeyFieldName, sortKeyFieldName];
 
     const result = await this.ddo__helperDynamoQueryProcessor<T>({
-      dynamoDbClient: () => this._dynamoDbClient(),
+      dynamoDb: () => this._dynamoDb(),
       params,
       orderDesc,
       hashKeyAndSortKey,
@@ -699,15 +713,25 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       throw this.allHelpCreateFriendlyError("Record does NOT exists");
     }
 
-    const params: DocumentClient.DeleteItemInput = {
+    const params: DeleteItemInput = {
       TableName: tableFullName,
       Key: {
-        [partitionKeyFieldName]: dataId,
-        [sortKeyFieldName]: featureEntityValue,
+        [partitionKeyFieldName]: { S: dataId },
+        [sortKeyFieldName]: { S: featureEntityValue },
       },
     };
 
-    await this._dynamoDbClient().delete(params).promise();
+    try {
+      await this._dynamoDb().deleteItem(params);
+    } catch (err) {
+      if (err && err.code === "ResourceNotFoundException") {
+        throw this.allHelpCreateFriendlyError("Table not found");
+      } else if (err && err.code === "ResourceInUseException") {
+        throw this.allHelpCreateFriendlyError("Table in use");
+      } else {
+        throw err;
+      }
+    }
     return dataExist;
   }
 
@@ -729,7 +753,7 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
     } = this._getLocalVariables();
 
     const delArray = dataIdsNoDuplicates.map((dataId) => {
-      const params01: DynamoDB.WriteRequest = {
+      const params01: WriteRequest = {
         DeleteRequest: {
           Key: {
             [partitionKeyFieldName]: { S: dataId },
@@ -740,13 +764,13 @@ export default abstract class DynamoDataOperation<T> extends BaseMixins {
       return params01;
     });
 
-    const params: DynamoDB.BatchWriteItemInput = {
+    const params: BatchWriteItemInput = {
       RequestItems: {
         [tableFullName]: delArray,
       },
     };
 
-    await this._dynamoDb().batchWriteItem(params).promise();
+    await this._dynamoDb().batchWriteItem(params);
     return true;
   }
 }

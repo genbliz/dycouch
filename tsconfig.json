@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2018",
-    "module": "esnext",
+    "module": "CommonJS",
     "declaration": false,
     "noImplicitAny": false,
     "removeComments": true,
@@ -20,6 +20,6 @@
     "baseUrl": "./",
     "rootDir": "./src/"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/index.ts"],
   "exclude": ["node_modules", "src/**/*.test.ts", "src/**/*.spec.ts"]
 }

@@ -1,27 +1,16 @@
 import { LoggingService } from "../helpers/logging-service";
-import AWS, { DynamoDB } from "aws-sdk";
-import { DocumentClient } from "aws-sdk/clients/dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
 class DynamoConnectionBase {
-  private _dynamoDbClient: DocumentClient;
-  private _dynamoDb: DynamoDB;
+  private _dynamoDbClient: DynamoDBClient;
 
   constructor() {
     const region = "us-west-2";
-    AWS.config.update({
-      region,
-    });
-    const options: DynamoDB.ClientConfiguration = {
+    this._dynamoDbClient = new DynamoDBClient({
       apiVersion: "2012-08-10",
       region,
-    };
-    this._dynamoDb = new DynamoDB(options);
-    this._dynamoDbClient = new DocumentClient(options);
+    });
     LoggingService.log(`Initialized DynamoDb, region: ${region}`);
-  }
-
-  dynamoDbInst() {
-    return this._dynamoDb;
   }
 
   dynamoDbClientInst() {
