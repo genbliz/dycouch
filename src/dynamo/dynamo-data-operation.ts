@@ -19,7 +19,7 @@ import type {
   GetItemCommandInput,
 } from "@aws-sdk/client-dynamodb";
 import Joi from "joi";
-import { Marshaller } from "@aws/dynamodb-auto-marshaller";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { getJoiValidationErrors } from "../helpers/base-joi-helper";
 import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
 import { DynamoManageTable } from "./dynamo-manage-table";
@@ -42,16 +42,15 @@ function createTenantSchema(schemaMapDef: Joi.SchemaMap) {
   return Joi.object().keys({ ...schemaMapDef, ...coreSchemaDefinition });
 }
 
-type IModelKeys = keyof IDynamoDataCoreEntityModel;
+type IModelBase = IDynamoDataCoreEntityModel;
 
 export default abstract class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
-  private readonly here_partitionKeyFieldName: IModelKeys = "id";
-  private readonly here_sortKeyFieldName: IModelKeys = "featureEntity";
+  private readonly here_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
+  private readonly here_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
   //
   private readonly here_dynamoDb: () => DynamoInitializer;
   private readonly here_dataKeyGenerator: () => string;
   private readonly here_schema: Joi.Schema;
-  private readonly here_marshaller: Marshaller;
   private readonly here_tableFullName: string;
   private readonly here_strictRequiredFields: string[];
   private readonly here_featureEntityValue: string;
@@ -76,7 +75,6 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     this.here_dataKeyGenerator = dataKeyGenerator;
     this.here_schema = createTenantSchema(schemaDef);
     this.here_tableFullName = baseTableName;
-    this.here_marshaller = new Marshaller({ onEmpty: "omit", onInvalid: "omit" });
     this.here_featureEntityValue = featureEntityValue;
     this.here_secondaryIndexOptions = secondaryIndexOptions;
     this.here_strictRequiredFields = strictRequiredFields as string[];
@@ -176,7 +174,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
   }
 
   private _withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFieldCondition<T> }) {
-    if (item && withCondition?.length) {
+    if (item && typeof item === "object" && withCondition?.length) {
       const isPassed = withCondition.every(({ field, equals }) => {
         return item[field] !== undefined && item[field] === equals;
       });
@@ -309,8 +307,11 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       const msg = getJoiValidationErrors(error) ?? "Validation error occured";
       throw this.errorHelper.fuse_helper_createFriendlyError(msg);
     }
-    const marshalledData: any = this.here_marshaller.marshallItem(value);
-
+    const marshalledData = marshall(value, {
+      convertClassInstanceToMap: true,
+      convertEmptyValues: true,
+      removeUndefinedValues: true,
+    });
     return await Promise.resolve({
       validatedData: value,
       marshalled: marshalledData,
@@ -563,7 +564,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
           if (data?.Responses) {
             const itemListRaw = data.Responses[tableFullName];
             const itemList = itemListRaw.map((item) => {
-              return this.here_marshaller.unmarshallItem(item);
+              return unmarshall(item);
             });
             returnedItems = [...returnedItems, ...itemList];
           }

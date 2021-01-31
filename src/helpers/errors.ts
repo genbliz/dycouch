@@ -19,12 +19,12 @@ export class FuseErrorUtils {
       }
     });
     if (errors.length) {
-      throw new GenericFriendlyError(`${errors.join("; ")}.`);
+      throw new GenericDataError(`${errors.join("; ")}.`);
     }
   }
 
   fuse_helper_createFriendlyError(message: string, statusCode?: number) {
-    return new GenericFriendlyError(message);
+    return new GenericDataError(message);
   }
 
   fuse_helper_validateRequiredString(keyValueValidates: { [key: string]: string }) {
@@ -35,7 +35,7 @@ export class FuseErrorUtils {
       }
     });
     if (errors.length) {
-      throw new GenericFriendlyError(`${errors.join("; ")}.`);
+      throw new GenericDataError(`${errors.join("; ")}.`);
     }
   }
 }
