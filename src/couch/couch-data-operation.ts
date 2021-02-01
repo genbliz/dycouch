@@ -6,6 +6,7 @@ import { CouchInitializer } from "./couch-initializer";
 import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
 import { FuseErrorUtils, GenericDataError } from "src/helpers/errors";
 import { getJoiValidationErrors } from "src/helpers/base-joi-helper";
+import { CouchFilterQueryOperation } from "./couch-filter-query-operation";
 
 interface IDynamoOptions<T> {
   schemaDef: Joi.SchemaMap;
@@ -35,6 +36,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   private readonly here_featureEntityValue: string;
   private readonly here_secondaryIndexOptions: ISecondaryIndexDef<T>[];
   private readonly errorHelper: FuseErrorUtils;
+  private readonly filterQueryOperation = new CouchFilterQueryOperation();
 
   constructor({
     schemaDef,
@@ -270,8 +272,12 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       return undefined;
     };
 
+    const queryDefData = this.filterQueryOperation.processQueryFilter({
+      queryDefs: paramOptions.query,
+    });
+
     const data = await this._couchDbInstance().find({
-      selector: { ...paramOptions.query },
+      selector: { ...queryDefData },
       fields: _normalizeFields(paramOptions?.fields || []),
     });
     const dataList = data?.docs?.map((item) => {

@@ -1,13 +1,9 @@
-// import { LoggingService } from "../helpers/logging-service";
-// import { UtilService } from "../helpers/util-service";
 import type { IDynamoQueryConditionParams, IQueryDefinition } from "../types";
 
 export type IConditionOperators = PouchDB.Find.ConditionOperators;
 export type ICombinationOperators = PouchDB.Find.CombinationOperators;
 
 interface IQueryConditionsKeys {
-  // $and?: Selector[];
-  // $or?: Selector[];
   $lt?: any;
   $gt?: any;
   $lte?: any;
@@ -37,8 +33,6 @@ const conditionKeyMap: FieldPartial<IDynamoQueryConditionParams> = {
   $beginsWith: "",
 };
 
-// type IDictionaryAttr = { [key: string]: any };
-
 type FieldPartialQuery<T> = { [P in keyof T]-?: T[P] };
 type IQueryConditions = {
   [fieldName: string]: FieldPartialQuery<IQueryConditionsKeys>;
@@ -63,7 +57,7 @@ export class CouchFilterQueryOperation {
     return result;
   }
 
-  fuse__helperFilterBasic({
+  private fuse__helperFilterBasic({
     fieldName,
     val,
     conditionExpr,
@@ -204,7 +198,7 @@ export class CouchFilterQueryOperation {
     return _queryConditions;
   }
 
-  fuse__helperDynamoFilterOperation({ queryDefs }: { queryDefs: IQueryDefinition<any>["query"] }) {
+  processQueryFilter({ queryDefs }: { queryDefs: IQueryDefinition<any>["query"] }) {
     let queryMainConditions: IQueryConditions[] = [];
     let queryAndConditions: IQueryConditions[] = [];
     let queryOrConditions: IQueryConditions[] = [];
@@ -295,29 +289,3 @@ export class CouchFilterQueryOperation {
     return queryAllConditions;
   }
 }
-
-const dd = new CouchFilterQueryOperation();
-
-const _searchTerm = "chuks";
-
-const query: any = {
-  amount: { $gt: 0 },
-  category: { $gt: "Nunu" },
-  $or: [
-    { amount: { $contains: _searchTerm } },
-    { category: { $contains: _searchTerm } },
-    { invoiceId: { $contains: _searchTerm } },
-    { transactionId: { $contains: _searchTerm } },
-    { remark: { $contains: _searchTerm } },
-  ],
-  $and: [
-    //
-    { category: _searchTerm },
-    { invoiceId: { $eq: _searchTerm } },
-  ],
-};
-
-const result = dd.fuse__helperDynamoFilterOperation({ queryDefs: query });
-
-console.log(JSON.stringify(result, null, 2));
-process.exit(0);
