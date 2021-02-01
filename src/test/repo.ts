@@ -57,10 +57,22 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
       partitionKeyQuery: {
         equals: 0,
       },
-      fields: ["amount"],
+      fields: ["amount", "category"],
       query: {
-        amount: 9,
-        category: { $gt: "" },
+        amount: { $gt: 0 },
+        category: { $gt: "Nunu" },
+        $or: [
+          { amount: { $contains: _searchTerm } },
+          { category: { $contains: _searchTerm } },
+          { invoiceId: { $contains: _searchTerm } },
+          { transactionId: { $contains: _searchTerm } },
+          { remark: { $contains: _searchTerm } },
+        ],
+        $and: [
+          //
+          { category: { $contains: _searchTerm } },
+          { invoiceId: { $contains: _searchTerm } },
+        ],
       },
     });
   }

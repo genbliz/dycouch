@@ -93,9 +93,6 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   private _stripNonRequiredOutputData({ dataObj, excludeFields }: { dataObj: any; excludeFields?: string[] }): T {
     const returnData = {} as any;
     if (typeof dataObj === "object" && this._entityResultFieldKeysMap.size > 0) {
-      if (dataObj["_id"]) {
-        delete dataObj["_id"];
-      }
       Object.entries(dataObj).forEach(([key, value]) => {
         if (this._entityResultFieldKeysMap.has(key)) {
           if (excludeFields?.length) {
@@ -111,6 +108,11 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return returnData;
   }
 
+  private _getNativePouchId(dataId: string) {
+    const { featureEntityValue } = this._getLocalVariables();
+    return [featureEntityValue, dataId].join("#");
+  }
+
   private _getBaseObject({ dataId }: { dataId: string }) {
     const { partitionKeyFieldName, sortKeyFieldName, featureEntityValue } = this._getLocalVariables();
 
@@ -120,11 +122,6 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       [sortKeyFieldName]: featureEntityValue,
     };
     return dataMust;
-  }
-
-  private _getNativePouchId(dataId: string) {
-    const { featureEntityValue } = this._getLocalVariables();
-    return [featureEntityValue, dataId].join("#");
   }
 
   private _withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFieldCondition<T> }) {
@@ -137,7 +134,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return true;
   }
 
-  private _checkValidateMustBeAnObjectDataType(data: any) {
+  private _checkValidateMustBeAnObjectDataType(data: unknown) {
     if (!data || typeof data !== "object") {
       throw this._createGenericError(`Data MUST be valid object`);
     }
