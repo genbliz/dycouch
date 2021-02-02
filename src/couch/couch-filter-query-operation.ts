@@ -57,7 +57,7 @@ export class CouchFilterQueryOperation {
     return result;
   }
 
-  private fuse__helperFilterBasic({
+  private operation__helperFilterBasic({
     fieldName,
     val,
     conditionExpr,
@@ -176,7 +176,7 @@ export class CouchFilterQueryOperation {
         if (hasQueryConditionKey(conditionKey)) {
           const conditionExpr = conditionKeyMap[conditionKey];
           if (conditionExpr) {
-            const _queryConditions = this.fuse__helperFilterBasic({
+            const _queryConditions = this.operation__helperFilterBasic({
               fieldName: fieldName,
               val: _conditionObjValue,
               conditionExpr: conditionExpr,
@@ -190,7 +190,7 @@ export class CouchFilterQueryOperation {
   }
 
   private operation_translateBasicQueryOperation({ fieldName, queryObject }: { fieldName: string; queryObject: any }) {
-    const _queryConditions = this.fuse__helperFilterBasic({
+    const _queryConditions = this.operation__helperFilterBasic({
       fieldName: fieldName,
       val: queryObject,
       // conditionExpr: "$eq",
@@ -206,8 +206,8 @@ export class CouchFilterQueryOperation {
     Object.keys(queryDefs).forEach((fieldName_Or_And) => {
       if (fieldName_Or_And === "$or") {
         const orKey = fieldName_Or_And;
-        const orArray: any[] = queryDefs[orKey];
-        if (Array.isArray(orArray)) {
+        const orArray: IQueryConditions[] = queryDefs[orKey];
+        if (orArray && Array.isArray(orArray)) {
           orArray.forEach((orQuery) => {
             Object.keys(orQuery).forEach((fieldName) => {
               //
@@ -231,8 +231,8 @@ export class CouchFilterQueryOperation {
         }
       } else if (fieldName_Or_And === "$and") {
         const andKey = fieldName_Or_And;
-        const andArray: any[] = queryDefs[andKey];
-        if (Array.isArray(andArray)) {
+        const andArray: IQueryConditions[] = queryDefs[andKey];
+        if (andArray && Array.isArray(andArray)) {
           andArray.forEach((andQuery) => {
             Object.keys(andQuery).forEach((fieldName) => {
               //
@@ -255,35 +255,43 @@ export class CouchFilterQueryOperation {
           });
         }
       } else {
-        const fieldName2 = fieldName_Or_And;
-        const queryObjectOrValue = queryDefs[fieldName2];
-        if (typeof queryObjectOrValue === "object") {
-          const _queryCond = this.operation__translateAdvancedQueryOperation({
-            fieldName: fieldName2,
-            queryObject: queryObjectOrValue,
-          });
-          queryMainConditions = [...queryMainConditions, ..._queryCond];
-        } else {
-          const _queryConditions = this.operation_translateBasicQueryOperation({
-            fieldName: fieldName2,
-            queryObject: queryObjectOrValue,
-          });
-          queryMainConditions = [...queryMainConditions, _queryConditions];
+        if (fieldName_Or_And) {
+          const fieldName2 = fieldName_Or_And;
+          const queryObjectOrValue = queryDefs[fieldName2];
+          if (queryObjectOrValue) {
+            if (typeof queryObjectOrValue === "object") {
+              const _queryCond = this.operation__translateAdvancedQueryOperation({
+                fieldName: fieldName2,
+                queryObject: queryObjectOrValue,
+              });
+              queryMainConditions = [...queryMainConditions, ..._queryCond];
+            } else {
+              const _queryConditions = this.operation_translateBasicQueryOperation({
+                fieldName: fieldName2,
+                queryObject: queryObjectOrValue,
+              });
+              queryMainConditions = [...queryMainConditions, _queryConditions];
+            }
+          }
         }
       }
     });
 
     let queryAllConditions: IQueryConditions & { $and: IQueryConditions[] } & { $or: IQueryConditions[] } = {} as any;
 
-    for (const item1 of queryMainConditions) {
-      queryAllConditions = { ...queryAllConditions, ...item1 };
+    if (queryMainConditions?.length) {
+      for (const item1 of queryMainConditions) {
+        if (item1) {
+          queryAllConditions = { ...queryAllConditions, ...item1 };
+        }
+      }
     }
 
-    if (queryAndConditions.length) {
+    if (queryAndConditions?.length) {
       queryAllConditions.$and = queryAndConditions;
     }
 
-    if (queryOrConditions.length) {
+    if (queryOrConditions?.length) {
       queryAllConditions.$or = queryOrConditions;
     }
     return queryAllConditions;

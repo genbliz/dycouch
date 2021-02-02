@@ -207,6 +207,85 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return this._fuse_stripNonRequiredOutputData({ dataObj: data });
   }
 
+  async fuse_getAll(): Promise<T[]> {
+    const data = await this._fuse_couchDbInstance().allDocs<IFullEntity<T>>({
+      include_docs: true,
+      startkey: this._fuse_featureEntityValue,
+      endkey: `${this._fuse_featureEntityValue}\ufff0`,
+    });
+    const dataList: T[] = [];
+    data?.rows?.forEach((item) => {
+      if (item?.doc?.featureEntity === this._fuse_featureEntityValue) {
+        const k = this._fuse_stripNonRequiredOutputData({ dataObj: item.doc });
+        dataList.push(k);
+      }
+    });
+    return dataList;
+  }
+
+  protected async fuse_getOneById({
+    dataId,
+    withCondition,
+  }: {
+    dataId: string;
+    withCondition?: IFuseFieldCondition<T> | undefined;
+  }): Promise<T | null> {
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
+
+    const nativeId = this._fuse_getNativePouchId(dataId);
+
+    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+    if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
+      return null;
+    }
+    const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
+    if (!passed) {
+      return null;
+    }
+    return this._fuse_stripNonRequiredOutputData({ dataObj: dataInDb });
+  }
+
+  protected async fuse_updateOneById({
+    dataId,
+    data,
+    withCondition,
+  }: {
+    dataId: string;
+    data: T;
+    withCondition?: IFuseFieldCondition<T> | undefined;
+  }): Promise<T> {
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
+
+    const nativeId = this._fuse_getNativePouchId(dataId);
+
+    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+    if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue && dataInDb._rev)) {
+      throw this._fuse_createGenericError("Record does not exists");
+    }
+    const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
+    if (!passed) {
+      throw this._fuse_createGenericError("Record with conditions does not exists");
+    }
+    const _data: IFullEntity<T> = { ...data } as any;
+
+    const validated = await this._fuse_allHelpValidateGetValue(_data);
+
+    const result = await this._fuse_couchDbInstance().put<T>({
+      ...validated.validatedData,
+      _rev: dataInDb._rev,
+    });
+    if (!result.ok) {
+      throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
+    }
+    return this._fuse_stripNonRequiredOutputData({ dataObj: data });
+  }
+
+  protected fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
+    const dataInput: IFullEntity<T> = data as any;
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId: dataInput.id });
+    return this.fuse_updateOneById({ data, dataId: dataInput.id });
+  }
+
   protected async fuse_getManyByIds({
     dataIds,
     fields,
@@ -291,26 +370,45 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return dataList || [];
   }
 
-  async fuse_getAll(): Promise<T[]> {
-    const data = await this._fuse_couchDbInstance().allDocs<IFullEntity<T>>({
-      include_docs: true,
-      startkey: this._fuse_featureEntityValue,
-      endkey: `${this._fuse_featureEntityValue}\ufff0`,
-    });
-    const dataList: T[] = [];
-    data?.rows?.forEach((item) => {
-      if (item?.doc?.featureEntity === this._fuse_featureEntityValue) {
-        const k = this._fuse_stripNonRequiredOutputData({ dataObj: item.doc });
-        dataList.push(k);
-      }
-    });
-    return dataList;
-  }
-
-  protected fuse_getManyByConditionPaginate(
+  protected async fuse_getManyByConditionPaginate(
     paramOptions: IFuseQueryParamOptions<T, any>,
   ): Promise<IFusePagingResult<T[]>> {
-    throw new Error("Method not implemented.");
+    if (!paramOptions?.query) {
+      throw this._fuse_createGenericError("Invalid query object");
+    }
+
+    paramOptions.query = {
+      ...paramOptions.query,
+      featureEntity: this._fuse_featureEntityValue,
+    };
+
+    const _normalizeFields0 = (fields: (keyof T)[] | string[]) => {
+      if (fields?.length) {
+        const fieldList: string[] = [];
+        for (const field of fields as string[]) {
+          fieldList.push(field);
+        }
+        if (fieldList.length) {
+          return this._fuse_removeDuplicateString(fieldList);
+        }
+      }
+      return undefined;
+    };
+
+    const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({
+      queryDefs: paramOptions.query,
+    });
+
+    const data = await this._fuse_couchDbInstance().find({
+      selector: { ...queryDefData },
+      fields: _normalizeFields(paramOptions?.fields || []),
+    });
+    const dataList = data?.docs?.map((item) => {
+      return this._fuse_stripNonRequiredOutputData({ dataObj: item });
+    });
+    return {
+      mainResult: dataList,
+    };
   }
 
   protected fuse_getManyByIndex<TData = T, TSortKeyField = string>(
@@ -414,67 +512,6 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
   //   });
   //   return dataList;
   // }
-
-  protected async fuse_getOneById({
-    dataId,
-    withCondition,
-  }: {
-    dataId: string;
-    withCondition?: IFuseFieldCondition<T> | undefined;
-  }): Promise<T | null> {
-    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
-
-    const nativeId = this._fuse_getNativePouchId(dataId);
-
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
-    if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
-      return null;
-    }
-    const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
-    if (!passed) {
-      return null;
-    }
-    return this._fuse_stripNonRequiredOutputData({ dataObj: dataInDb });
-  }
-
-  protected async fuse_updateOneById({
-    dataId,
-    data,
-    withCondition,
-  }: {
-    dataId: string;
-    data: T;
-    withCondition?: IFuseFieldCondition<T> | undefined;
-  }): Promise<T> {
-    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
-
-    const nativeId = this._fuse_getNativePouchId(dataId);
-
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
-    if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue && dataInDb._rev)) {
-      throw this._fuse_createGenericError("Record does not exists");
-    }
-    const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
-    if (!passed) {
-      throw this._fuse_createGenericError("Record with conditions does not exists");
-    }
-    const _data: IFullEntity<T> = { ...data } as any;
-
-    const validated = await this._fuse_allHelpValidateGetValue(_data);
-
-    const result = await this._fuse_couchDbInstance().put<T>({
-      ...validated.validatedData,
-      _rev: dataInDb._rev,
-    });
-    if (!result.ok) {
-      throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
-    }
-    return this._fuse_stripNonRequiredOutputData({ dataObj: data });
-  }
-
-  protected fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
-    throw new Error("Method not implemented.");
-  }
 
   protected async fuse_deleteById({
     dataId,

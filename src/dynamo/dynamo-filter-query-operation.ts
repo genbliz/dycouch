@@ -268,7 +268,7 @@ export class DynamoFilterQueryOperation {
       if (fieldName_Or_And === "$or") {
         const orKey = fieldName_Or_And;
         const orArray: any[] = queryDefs[orKey];
-        if (Array.isArray(orArray)) {
+        if (orArray && Array.isArray(orArray)) {
           orArray.forEach((orQuery) => {
             Object.keys(orQuery).forEach((fieldName) => {
               //
@@ -293,7 +293,7 @@ export class DynamoFilterQueryOperation {
       } else if (fieldName_Or_And === "$and") {
         const andKey = fieldName_Or_And;
         const andArray: any[] = queryDefs[andKey];
-        if (Array.isArray(andArray)) {
+        if (andArray && Array.isArray(andArray)) {
           andArray.forEach((andQuery) => {
             Object.keys(andQuery).forEach((fieldName) => {
               //
@@ -316,20 +316,24 @@ export class DynamoFilterQueryOperation {
           });
         }
       } else {
-        const fieldName2 = fieldName_Or_And;
-        const queryObjectOrValue = queryDefs[fieldName2];
-        if (typeof queryObjectOrValue === "object") {
-          const _queryCond = this.operation__translateAdvancedQueryOperation({
-            fieldName: fieldName2,
-            queryObject: queryObjectOrValue,
-          });
-          queryAndConditions = [...queryAndConditions, ..._queryCond];
-        } else {
-          const _queryConditions = this.operation_translateBasicQueryOperation({
-            fieldName: fieldName2,
-            queryObject: queryObjectOrValue,
-          });
-          queryAndConditions = [...queryAndConditions, _queryConditions];
+        if (fieldName_Or_And) {
+          const fieldName2 = fieldName_Or_And;
+          const queryObjectOrValue = queryDefs[fieldName2];
+          if (queryObjectOrValue) {
+            if (typeof queryObjectOrValue === "object") {
+              const _queryCond = this.operation__translateAdvancedQueryOperation({
+                fieldName: fieldName2,
+                queryObject: queryObjectOrValue,
+              });
+              queryAndConditions = [...queryAndConditions, ..._queryCond];
+            } else {
+              const _queryConditions = this.operation_translateBasicQueryOperation({
+                fieldName: fieldName2,
+                queryObject: queryObjectOrValue,
+              });
+              queryAndConditions = [...queryAndConditions, _queryConditions];
+            }
+          }
         }
       }
     });
