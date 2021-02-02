@@ -19,7 +19,7 @@ import type {
 import Joi from "joi";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { getJoiValidationErrors } from "../helpers/base-joi-helper";
-import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
+import { coreSchemaDefinition, IFuseCoreEntityModel } from "../core/base-schema";
 import { DynamoManageTable } from "./dynamo-manage-table";
 import { LoggingService } from "../helpers/logging-service";
 import { FuseInitializerDynamo } from "./dynamo-initializer";
@@ -40,7 +40,7 @@ function createTenantSchema(schemaMapDef: Joi.SchemaMap) {
   return Joi.object().keys({ ...schemaMapDef, ...coreSchemaDefinition });
 }
 
-type IModelBase = IDynamoDataCoreEntityModel;
+type IModelBase = IFuseCoreEntityModel;
 
 export default class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";

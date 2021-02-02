@@ -8,7 +8,7 @@ import {
 import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
 import { FuseInitializerCouch } from "./couch-initializer";
-import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
+import { coreSchemaDefinition, IFuseCoreEntityModel } from "../core/base-schema";
 import { FuseErrorUtils, GenericDataError } from "src/helpers/errors";
 import { getJoiValidationErrors } from "src/helpers/base-joi-helper";
 import { CouchFilterQueryOperation } from "./couch-filter-query-operation";
@@ -23,9 +23,9 @@ interface IDynamoOptions<T> {
   strictRequiredFields: (keyof T)[] | string[];
 }
 
-type IModelBase = IDynamoDataCoreEntityModel;
+type IModelBase = IFuseCoreEntityModel;
 
-type IFullEntity<T> = IDynamoDataCoreEntityModel & T;
+type IFullEntity<T> = IFuseCoreEntityModel & T;
 
 export default class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";

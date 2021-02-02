@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-export interface IDynamoDataCoreEntityModel {
+export interface IFuseCoreEntityModel {
   id: string;
   featureEntity: string;
 }

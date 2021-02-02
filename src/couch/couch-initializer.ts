@@ -2,7 +2,7 @@ import PouchDB from "pouchdb";
 import os from "os";
 import path from "path";
 import fs from "fs";
-import { IDynamoDataCoreEntityModel } from "../core/base-schema";
+import { IFuseCoreEntityModel } from "../core/base-schema";
 
 PouchDB.plugin(require("pouchdb-find"));
 PouchDB.plugin(require("pouchdb-adapter-node-websql"));
@@ -34,21 +34,21 @@ export class FuseInitializerCouch {
   }
 
   private createWebSqlInstance({ dbPath }: { dbPath: string }) {
-    return new PouchDB<IBaseDef<IDynamoDataCoreEntityModel>>(dbPath, {
+    return new PouchDB<IBaseDef<IFuseCoreEntityModel>>(dbPath, {
       adapter: "websql",
     });
   }
 
   private createHttpInstance({ dbUrl, password, username }: { dbUrl: string; password?: string; username?: string }) {
     if (username && password) {
-      return new PouchDB<IBaseDef<IDynamoDataCoreEntityModel>>(dbUrl, {
+      return new PouchDB<IBaseDef<IFuseCoreEntityModel>>(dbUrl, {
         auth: {
           password,
           username,
         },
       });
     }
-    return new PouchDB<IBaseDef<IDynamoDataCoreEntityModel>>(dbUrl);
+    return new PouchDB<IBaseDef<IFuseCoreEntityModel>>(dbUrl);
   }
 
   getInstance<T>(sqliteDbName?: string): PouchDB.Database<IBaseDef<T>> {
