@@ -10,7 +10,7 @@ export type {
   IFuseQueryDefinition,
 } from "./type/types";
 
-export { IDynamoDataCoreEntityModel as IFuseDataCoreEntityModel } from "./core/base-schema";
+export { IFuseCoreEntityModel } from "./core/base-schema";
 export { GenericDataError, GenericFriendlyError } from "./helpers/errors";
 import DynamoDataOp from "./dynamo/dynamo-data-operation";
 import CouchDataOp from "./couch/couch-data-operation";
