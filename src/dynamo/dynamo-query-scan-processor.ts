@@ -1,4 +1,4 @@
-import type { IDynamoPagingResult } from "../types/types";
+import type { IFusePagingResult } from "../type/types";
 import { LoggingService } from "../helpers/logging-service";
 import type { DynamoDB, QueryInput, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
 
@@ -71,7 +71,7 @@ export class DynamoQueryScanProcessor {
       },
     });
 
-    return new Promise<IDynamoPagingResult<T[]>>((resolve, reject) => {
+    return new Promise<IFusePagingResult<T[]>>((resolve, reject) => {
       let returnedItems: any[] = [];
       let _evaluationLimit: number = 0;
 
@@ -117,7 +117,7 @@ export class DynamoQueryScanProcessor {
           }
 
           if (pageSize && returnedItems.length >= pageSize) {
-            const scanResult: IDynamoPagingResult<T[]> = {
+            const scanResult: IFusePagingResult<T[]> = {
               mainResult: returnedItems,
             };
 

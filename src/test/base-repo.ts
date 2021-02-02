@@ -1,11 +1,11 @@
-import { ISecondaryIndexDef } from "../types/types";
+import { IFuseIndexDefinition } from "../type/types";
 import { FuseDataOperationDynamo, FuseInitializerDynamo } from "../";
 import Joi from "joi";
 
 interface IBaseRepoOptions<T> {
   schemaSubDef: Joi.SchemaMap;
   featureEntityValue: string;
-  secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  secondaryIndexOptions: IFuseIndexDefinition<T>[];
 }
 
 export abstract class BaseRepository<T> extends FuseDataOperationDynamo<T> {

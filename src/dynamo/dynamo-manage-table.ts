@@ -1,4 +1,4 @@
-import { ISecondaryIndexDef } from "../types/types";
+import { IFuseIndexDefinition } from "../type/types";
 import { UtilService } from "../helpers/util-service";
 import { LoggingService } from "../helpers/logging-service";
 import type {
@@ -14,7 +14,7 @@ import type {
 
 interface IDynamoOptions<T> {
   dynamoDb: () => DynamoDB;
-  secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  secondaryIndexOptions: IFuseIndexDefinition<T>[];
   tableFullName: string;
   partitionKeyFieldName: string;
   sortKeyFieldName: string;
@@ -25,7 +25,7 @@ export class DynamoManageTable<T> {
   private readonly sortKeyFieldName: string;
   private readonly dynamoDb: () => DynamoDB;
   private readonly tableFullName: string;
-  private readonly secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  private readonly secondaryIndexOptions: IFuseIndexDefinition<T>[];
 
   constructor({
     dynamoDb,
@@ -113,14 +113,14 @@ export class DynamoManageTable<T> {
     secondaryIndexOptions,
     existingTableInfo,
   }: {
-    secondaryIndexOptions: ISecondaryIndexDef<T>[];
+    secondaryIndexOptions: IFuseIndexDefinition<T>[];
     existingTableInfo: TableDescription;
   }): Promise<TableDescription[] | null> {
     try {
       const existingIndexNames: string[] = [];
       const staledIndexNames: string[] = [];
       const allIndexNames: string[] = [];
-      const newSecondaryIndexOptions: ISecondaryIndexDef<T>[] = [];
+      const newSecondaryIndexOptions: IFuseIndexDefinition<T>[] = [];
 
       const updateResults: TableDescription[] = [];
 
@@ -294,7 +294,7 @@ export class DynamoManageTable<T> {
   private _getGlobalSecondaryIndexCreationParams({
     secondaryIndexOptions,
   }: {
-    secondaryIndexOptions: ISecondaryIndexDef<T>[];
+    secondaryIndexOptions: IFuseIndexDefinition<T>[];
   }) {
     const { tableFullName } = this._tbl_getLocalVariables();
     const params: CreateTableInput = {

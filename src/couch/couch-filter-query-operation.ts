@@ -1,4 +1,4 @@
-import type { IDynamoQueryConditionParams, IQueryDefinition } from "../types/types";
+import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 
 export type IConditionOperators = PouchDB.Find.ConditionOperators;
 export type ICombinationOperators = PouchDB.Find.CombinationOperators;
@@ -17,7 +17,7 @@ interface IQueryConditionsKeys {
 }
 
 type FieldPartial<T> = { [P in keyof T]-?: any };
-const conditionKeyMap: FieldPartial<IDynamoQueryConditionParams> = {
+const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
   $eq: "$eq",
   $notEq: "$ne",
   $lt: "$lt",
@@ -123,7 +123,7 @@ export class CouchFilterQueryOperation {
   }) {
     const queryConditions: IQueryConditions[] = [];
     Object.keys(queryObject).forEach((condKey) => {
-      const conditionKey = condKey as keyof IDynamoQueryConditionParams;
+      const conditionKey = condKey as keyof IFuseQueryConditionParams;
       const _conditionObjValue = queryObject[conditionKey];
       if (conditionKey === "$between") {
         if (Array.isArray(_conditionObjValue)) {
@@ -198,7 +198,7 @@ export class CouchFilterQueryOperation {
     return _queryConditions;
   }
 
-  processQueryFilter({ queryDefs }: { queryDefs: IQueryDefinition<any>["query"] }) {
+  processQueryFilter({ queryDefs }: { queryDefs: IFuseQueryDefinition<any>["query"] }) {
     let queryMainConditions: IQueryConditions[] = [];
     let queryAndConditions: IQueryConditions[] = [];
     let queryOrConditions: IQueryConditions[] = [];

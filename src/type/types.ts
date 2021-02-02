@@ -9,7 +9,7 @@ type RequireAtLeastOne<T> = RequireAtLeastOneBase<T, keyof T>;
 type TypeFallBack<T> = undefined extends T ? Exclude<T, undefined> : T;
 type TypeFallBackArray<T> = number extends T ? number[] : string extends T ? string[] : T;
 
-export type IDynamoKeyConditionParams<T = any> = {
+export type IFuseKeyConditionParams<T = any> = {
   $eq?: TypeFallBack<T>;
   $gt?: TypeFallBack<T>;
   $gte?: TypeFallBack<T>;
@@ -19,7 +19,7 @@ export type IDynamoKeyConditionParams<T = any> = {
   $beginsWith?: string;
 };
 
-export type IDynamoQueryConditionParams<T = any> = IDynamoKeyConditionParams<T> & {
+export type IFuseQueryConditionParams<T = any> = IFuseKeyConditionParams<T> & {
   $in?: TypeFallBackArray<T>;
   $contains?: string;
   $notContains?: string;
@@ -29,19 +29,19 @@ export type IDynamoQueryConditionParams<T = any> = IDynamoKeyConditionParams<T> 
 };
 
 type QueryPartialAll<T> = {
-  [P in keyof T]: T[P] | IDynamoQueryConditionParams<T[P]>;
+  [P in keyof T]: T[P] | IFuseQueryConditionParams<T[P]>;
 };
 
 type QueryKeyConditionBasic<T> = {
-  [P in keyof T]: T[P] | IDynamoKeyConditionParams<T[P]>;
+  [P in keyof T]: T[P] | IFuseKeyConditionParams<T[P]>;
 };
 
-export interface IDynamoPagingResult<T> {
+export interface IFusePagingResult<T> {
   lastKeyHash?: any;
   mainResult: T;
 }
 
-export type IDynamoPagingParams = {
+export type IFusePagingParams = {
   evaluationLimit?: number;
   pageSize?: number;
   lastKeyHash?: any;
@@ -55,26 +55,26 @@ export type IDynamoPagingParams = {
 type IQueryDefOr<T> = { $or?: QueryPartialAll<RequireAtLeastOne<T>>[] };
 type IQueryDefAnd<T> = { $and?: QueryPartialAll<RequireAtLeastOne<T>>[] };
 
-export type IQueryDefinition<T> = QueryPartialAll<RequireAtLeastOne<T & IQueryDefOr<T> & IQueryDefAnd<T>>>;
+export type IFuseQueryDefinition<T> = QueryPartialAll<RequireAtLeastOne<T & IQueryDefOr<T> & IQueryDefAnd<T>>>;
 
-export interface IDynamoQueryParamOptions<T, ISortKeyObjField = any> {
-  query?: IQueryDefinition<T>;
+export interface IFuseQueryParamOptions<T, ISortKeyObjField = any> {
+  query?: IFuseQueryDefinition<T>;
   fields?: (keyof T)[];
   partitionKeyQuery: { equals: string | number };
   sortKeyQuery?: QueryKeyConditionBasic<Required<ISortKeyObjField>>;
-  pagingParams?: IDynamoPagingParams;
+  pagingParams?: IFusePagingParams;
 }
 
-export interface IDynamoQuerySecondayIndexOptions<T, TSortKeyField = string> {
+export interface IFuseQueryIndexOptions<T, TSortKeyField = string> {
   indexName: string;
   partitionKeyQuery: { equals: string | number };
-  sortKeyQuery?: IDynamoKeyConditionParams<TSortKeyField>;
-  query?: IQueryDefinition<T>;
+  sortKeyQuery?: IFuseKeyConditionParams<TSortKeyField>;
+  query?: IFuseQueryDefinition<T>;
   fields?: (keyof T)[];
-  pagingParams?: IDynamoPagingParams;
+  pagingParams?: IFusePagingParams;
 }
 
-export interface ISecondaryIndexDef<T> {
+export interface IFuseIndexDefinition<T> {
   indexName: string;
   keyFieldName: keyof T;
   sortFieldName: keyof T;
@@ -82,4 +82,4 @@ export interface ISecondaryIndexDef<T> {
   projectionFieldsInclude?: (keyof T)[];
 }
 
-export type IFieldCondition<T> = { field: keyof T; equals: string | number }[];
+export type IFuseFieldCondition<T> = { field: keyof T; equals: string | number }[];

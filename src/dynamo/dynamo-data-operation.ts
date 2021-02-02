@@ -1,10 +1,10 @@
 import { RepoModel } from "../model/repo-model";
 import type {
-  IDynamoQueryParamOptions,
-  ISecondaryIndexDef,
-  IFieldCondition,
-  IDynamoQuerySecondayIndexOptions,
-} from "../types/types";
+  IFuseQueryParamOptions,
+  IFuseIndexDefinition,
+  IFuseFieldCondition,
+  IFuseQueryIndexOptions,
+} from "../type/types";
 import { FuseErrorUtils, GenericDataError } from "./../helpers/errors";
 import type {
   DynamoDB,
@@ -22,16 +22,16 @@ import { getJoiValidationErrors } from "../helpers/base-joi-helper";
 import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
 import { DynamoManageTable } from "./dynamo-manage-table";
 import { LoggingService } from "../helpers/logging-service";
-import { DynamoInitializer } from "./dynamo-initializer";
+import { FuseInitializerDynamo } from "./dynamo-initializer";
 import { DynamoFilterQueryOperation } from "./dynamo-filter-query-operation";
 import { DynamoQueryScanProcessor } from "./dynamo-query-scan-processor";
 
 interface IDynamoOptions<T> {
   schemaDef: Joi.SchemaMap;
-  dynamoDb: () => DynamoInitializer;
+  dynamoDb: () => FuseInitializerDynamo;
   dataKeyGenerator: () => string;
   featureEntityValue: string;
-  secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  secondaryIndexOptions: IFuseIndexDefinition<T>[];
   baseTableName: string;
   strictRequiredFields: (keyof T)[] | string[];
 }
@@ -46,13 +46,13 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
   private readonly _fuse_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
   //
-  private readonly _fuse_dynamoDb: () => DynamoInitializer;
+  private readonly _fuse_dynamoDb: () => FuseInitializerDynamo;
   private readonly _fuse_dataKeyGenerator: () => string;
   private readonly _fuse_schema: Joi.Schema;
   private readonly _fuse_tableFullName: string;
   private readonly _fuse_strictRequiredFields: string[];
   private readonly _fuse_featureEntityValue: string;
-  private readonly _fuse_secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  private readonly _fuse_secondaryIndexOptions: IFuseIndexDefinition<T>[];
   private readonly _fuse_queryFilter: DynamoFilterQueryOperation;
   private readonly _fuse_queryScanProcessor: DynamoQueryScanProcessor;
   private readonly _fuse_errorHelper: FuseErrorUtils;
@@ -149,7 +149,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return new GenericDataError(error);
   }
 
-  private _fuse_withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFieldCondition<T> }) {
+  private _fuse_withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFuseFieldCondition<T> }) {
     if (item && typeof item === "object" && withCondition?.length) {
       const isPassed = withCondition.every(({ field, equals }) => {
         return item[field] !== undefined && item[field] === equals;
@@ -214,7 +214,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     withCondition,
   }: {
     dataId: string;
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }): Promise<T | null> {
     const {
       //
@@ -284,7 +284,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }: {
     dataId: string;
     data: T;
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }) {
     this._fuse_checkValidateStrictRequiredFields(data);
 
@@ -324,7 +324,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return result;
   }
 
-  protected async fuse_getManyByCondition(paramOptions: IDynamoQueryParamOptions<T>) {
+  protected async fuse_getManyByCondition(paramOptions: IFuseQueryParamOptions<T>) {
     paramOptions.pagingParams = undefined;
     const result = await this.fuse_getManyByConditionPaginate(paramOptions);
     if (result?.mainResult?.length) {
@@ -333,7 +333,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return [];
   }
 
-  protected async fuse_getManyByConditionPaginate(paramOptions: IDynamoQueryParamOptions<T>) {
+  protected async fuse_getManyByConditionPaginate(paramOptions: IFuseQueryParamOptions<T>) {
     const { tableFullName, sortKeyFieldName, partitionKeyFieldName } = this._fuse_getLocalVariables();
     //
     if (!paramOptions?.partitionKeyQuery?.equals === undefined) {
@@ -427,7 +427,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }: {
     dataIds: string[];
     fields?: (keyof T)[];
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }) {
     dataIds.forEach((dataId) => {
       this._fuse_errorHelper.fuse_helper_validateRequiredString({
@@ -470,7 +470,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }: {
     dataIds: string[];
     fields?: (keyof T)[];
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }) {
     return new Promise<T[]>((resolve, reject) => {
       const getRandom = () =>
@@ -594,7 +594,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }
 
   protected async fuse_getManyByIndex<TData = T, TSortKeyField = string>(
-    paramOption: IDynamoQuerySecondayIndexOptions<TData, TSortKeyField>,
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ) {
     paramOption.pagingParams = undefined;
     const result = await this.fuse_getManyByIndexPaginate<TData, TSortKeyField>(paramOption);
@@ -605,7 +605,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }
 
   protected async fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
-    paramOption: IDynamoQuerySecondayIndexOptions<TData, TSortKeyField>,
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ) {
     const { tableFullName, secondaryIndexOptions } = this._fuse_getLocalVariables();
 
@@ -712,7 +712,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     withCondition,
   }: {
     dataId: string;
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }): Promise<T> {
     //
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ Del1SortKey: dataId });

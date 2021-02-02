@@ -1,9 +1,4 @@
-import {
-  IFieldCondition,
-  IDynamoQueryParamOptions,
-  IDynamoPagingResult,
-  IDynamoQuerySecondayIndexOptions,
-} from "../types/types";
+import { IFuseFieldCondition, IFuseQueryParamOptions, IFusePagingResult, IFuseQueryIndexOptions } from "../type/types";
 
 export abstract class RepoModel<T> {
   protected abstract fuse_getManyByIds({
@@ -13,7 +8,7 @@ export abstract class RepoModel<T> {
   }: {
     dataIds: string[];
     fields?: (keyof T)[];
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }): Promise<T[]>;
 
   protected abstract fuse_createOne({ data }: { data: T }): Promise<T>;
@@ -23,29 +18,29 @@ export abstract class RepoModel<T> {
     withCondition,
   }: {
     dataId: string;
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }): Promise<T>;
 
-  protected abstract fuse_getManyByCondition(paramOptions: IDynamoQueryParamOptions<T>): Promise<T[]>;
+  protected abstract fuse_getManyByCondition(paramOptions: IFuseQueryParamOptions<T>): Promise<T[]>;
 
   protected abstract fuse_getManyByConditionPaginate(
-    paramOptions: IDynamoQueryParamOptions<T>,
-  ): Promise<IDynamoPagingResult<T[]>>;
+    paramOptions: IFuseQueryParamOptions<T>,
+  ): Promise<IFusePagingResult<T[]>>;
 
   protected abstract fuse_getManyByIndex<TData = T, TSortKeyField = string>(
-    paramOption: IDynamoQuerySecondayIndexOptions<TData, TSortKeyField>,
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<T[]>;
 
   protected abstract fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
-    paramOption: IDynamoQuerySecondayIndexOptions<TData, TSortKeyField>,
-  ): Promise<IDynamoPagingResult<T[]>>;
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+  ): Promise<IFusePagingResult<T[]>>;
 
   protected abstract fuse_getOneById({
     dataId,
     withCondition,
   }: {
     dataId: string;
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }): Promise<T | null>;
 
   protected abstract fuse_updateOneById({
@@ -55,7 +50,7 @@ export abstract class RepoModel<T> {
   }: {
     dataId: string;
     data: T;
-    withCondition?: IFieldCondition<T>;
+    withCondition?: IFuseFieldCondition<T>;
   }): Promise<T>;
 
   protected abstract fuse_updateOneDirect({ data }: { data: T }): Promise<T>;

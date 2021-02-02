@@ -22,7 +22,7 @@ interface IOptions {
   };
 }
 
-export class CouchInitializer {
+export class FuseInitializerCouch {
   private _databaseInstance!: PouchDB.Database<any>;
 
   private readonly couchConfig: IOptions["couchConfig"];

@@ -1,9 +1,9 @@
 import { LoggingService } from "../helpers/logging-service";
 import { UtilService } from "../helpers/util-service";
-import type { IDynamoQueryConditionParams, IQueryDefinition } from "../types/types";
+import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 
 type FieldPartial<T> = { [P in keyof T]-?: any };
-const conditionKeyMap: FieldPartial<IDynamoQueryConditionParams> = {
+const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
   $eq: "=",
   $notEq: "<>",
   $lt: "<",
@@ -173,7 +173,7 @@ export class DynamoFilterQueryOperation {
   }) {
     const queryConditions: IQueryConditions[] = [];
     Object.keys(queryObject).forEach((condKey) => {
-      const conditionKey = condKey as keyof IDynamoQueryConditionParams;
+      const conditionKey = condKey as keyof IFuseQueryConditionParams;
       const _conditionObjValue = queryObject[conditionKey];
       if (conditionKey === "$between") {
         if (Array.isArray(_conditionObjValue)) {
@@ -252,7 +252,7 @@ export class DynamoFilterQueryOperation {
     queryDefs,
     projectionFields,
   }: {
-    queryDefs: IQueryDefinition<any>["query"];
+    queryDefs: IFuseQueryDefinition<any>["query"];
     projectionFields: any[] | undefined | null;
   }) {
     let queryAndConditions: IQueryConditions[] = [];

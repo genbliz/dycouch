@@ -1,8 +1,13 @@
-import { IFieldCondition, ISecondaryIndexDef } from "../types/types";
-import { IFuseFieldCondition, IFuseQueryParamOptions, IFusePagingResult, IFuseQuerySecondayIndexOptions } from "src";
+import {
+  IFuseFieldCondition,
+  IFuseIndexDefinition,
+  IFusePagingResult,
+  IFuseQueryIndexOptions,
+  IFuseQueryParamOptions,
+} from "../type/types";
 import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
-import { CouchInitializer } from "./couch-initializer";
+import { FuseInitializerCouch } from "./couch-initializer";
 import { coreSchemaDefinition, IDynamoDataCoreEntityModel } from "../core/base-schema";
 import { FuseErrorUtils, GenericDataError } from "src/helpers/errors";
 import { getJoiValidationErrors } from "src/helpers/base-joi-helper";
@@ -10,10 +15,10 @@ import { CouchFilterQueryOperation } from "./couch-filter-query-operation";
 
 interface IDynamoOptions<T> {
   schemaDef: Joi.SchemaMap;
-  couchDb: () => CouchInitializer;
+  couchDb: () => FuseInitializerCouch;
   dataKeyGenerator: () => string;
   featureEntityValue: string;
-  secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  secondaryIndexOptions: IFuseIndexDefinition<T>[];
   baseTableName: string;
   strictRequiredFields: (keyof T)[] | string[];
 }
@@ -22,19 +27,19 @@ type IModelBase = IDynamoDataCoreEntityModel;
 
 type IFullEntity<T> = IDynamoDataCoreEntityModel & T;
 
-export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
+export default class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
   private readonly _fuse_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
   //
   private readonly _fuse_operationNotSuccessful = "Operation Not Successful";
   private readonly _fuse_entityResultFieldKeysMap: Map<string, string>;
-  private readonly _fuse_couchDb: () => CouchInitializer;
+  private readonly _fuse_couchDb: () => FuseInitializerCouch;
   private readonly _fuse_dataKeyGenerator: () => string;
   private readonly _fuse_schema: Joi.Schema;
   private readonly _fuse_tableFullName: string;
   private readonly _fuse_strictRequiredFields: string[];
   private readonly _fuse_featureEntityValue: string;
-  private readonly _fuse_secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  private readonly _fuse_secondaryIndexOptions: IFuseIndexDefinition<T>[];
   private readonly _fuse_errorHelper: FuseErrorUtils;
   private readonly _fuse_filterQueryOperation = new CouchFilterQueryOperation();
 
@@ -126,7 +131,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return dataMust;
   }
 
-  private _fuse_withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFieldCondition<T> }) {
+  private _fuse_withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFuseFieldCondition<T> }) {
     if (item && typeof item === "object" && withCondition?.length) {
       const isPassed = withCondition.every(({ field, equals }) => {
         return item[field] !== undefined && item[field] === equals;
@@ -309,13 +314,13 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   }
 
   protected fuse_getManyByIndex<TData = T, TSortKeyField = string>(
-    paramOption: IFuseQuerySecondayIndexOptions<TData, TSortKeyField>,
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
 
   protected fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
-    paramOption: IFuseQuerySecondayIndexOptions<TData, TSortKeyField>,
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<IFusePagingResult<T[]>> {
     throw new Error("Method not implemented.");
   }
