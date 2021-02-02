@@ -8,7 +8,7 @@ export type {
   IDynamoQueryConditionParams as IFuseQueryConditionParams,
   IDynamoPagingResult as IFusePagingResult,
   IQueryDefinition as IFuseQueryDefinition,
-} from "./types";
+} from "./types/types";
 
 export { IDynamoDataCoreEntityModel as IFuseDataCoreEntityModel } from "./core/base-schema";
 export { GenericDataError, GenericFriendlyError } from "./helpers/errors";

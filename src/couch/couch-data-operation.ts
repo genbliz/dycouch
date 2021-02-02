@@ -1,4 +1,4 @@
-import { IFieldCondition, ISecondaryIndexDef } from "../types/index";
+import { IFieldCondition, ISecondaryIndexDef } from "../types/types";
 import { IFuseFieldCondition, IFuseQueryParamOptions, IFusePagingResult, IFuseQuerySecondayIndexOptions } from "src";
 import { RepoModel } from "../model/repo-model";
 import Joi from "joi";

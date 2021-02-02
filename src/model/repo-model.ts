@@ -3,7 +3,7 @@ import {
   IDynamoQueryParamOptions,
   IDynamoPagingResult,
   IDynamoQuerySecondayIndexOptions,
-} from "../types";
+} from "../types/types";
 
 export abstract class RepoModel<T> {
   protected abstract fuse_getManyByIds({

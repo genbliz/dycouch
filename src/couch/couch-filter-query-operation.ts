@@ -1,4 +1,4 @@
-import type { IDynamoQueryConditionParams, IQueryDefinition } from "../types";
+import type { IDynamoQueryConditionParams, IQueryDefinition } from "../types/types";
 
 export type IConditionOperators = PouchDB.Find.ConditionOperators;
 export type ICombinationOperators = PouchDB.Find.CombinationOperators;

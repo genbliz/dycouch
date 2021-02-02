@@ -1,4 +1,4 @@
-import { ISecondaryIndexDef } from "../types";
+import { ISecondaryIndexDef } from "../types/types";
 import { FuseDataOperationDynamo, FuseInitializerDynamo } from "../";
 import Joi from "joi";
 

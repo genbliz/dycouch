@@ -1,4 +1,4 @@
-import type { IDynamoPagingResult } from "../types";
+import type { IDynamoPagingResult } from "../types/types";
 import { LoggingService } from "../helpers/logging-service";
 import type { DynamoDB, QueryInput, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
 

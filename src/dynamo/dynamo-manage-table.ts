@@ -1,4 +1,4 @@
-import { ISecondaryIndexDef } from "../types";
+import { ISecondaryIndexDef } from "../types/types";
 import { UtilService } from "../helpers/util-service";
 import { LoggingService } from "../helpers/logging-service";
 import type {

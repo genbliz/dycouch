@@ -4,7 +4,7 @@ import type {
   ISecondaryIndexDef,
   IFieldCondition,
   IDynamoQuerySecondayIndexOptions,
-} from "../types";
+} from "../types/types";
 import { FuseErrorUtils, GenericDataError } from "./../helpers/errors";
 import type {
   DynamoDB,
