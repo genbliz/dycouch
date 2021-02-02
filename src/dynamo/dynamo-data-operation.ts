@@ -10,8 +10,6 @@ import type {
   DynamoDB,
   PutItemInput,
   DeleteItemInput,
-  WriteRequest,
-  BatchWriteItemInput,
   QueryInput,
   BatchGetItemInput,
   AttributeValue,
@@ -44,7 +42,7 @@ function createTenantSchema(schemaMapDef: Joi.SchemaMap) {
 
 type IModelBase = IDynamoDataCoreEntityModel;
 
-export default abstract class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
+export default class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
   private readonly _fuse_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
   //
@@ -129,7 +127,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
 
   private _fuse_checkValidateMustBeAnObjectDataType(data: any) {
     if (!data || typeof data !== "object") {
-      throw new GenericDataError(`Data MUST be valid object`);
+      throw this._fuse_createGenericError(`Data MUST be valid object`);
     }
   }
 
@@ -141,10 +139,14 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     if (strictRequiredFields?.length) {
       for (const field of strictRequiredFields) {
         if (onDataObj[field] === null || onDataObj[field] === undefined) {
-          throw new GenericDataError(`Strict required field NOT defined`);
+          throw this._fuse_createGenericError(`Strict required field NOT defined`);
         }
       }
     }
+  }
+
+  private _fuse_createGenericError(error: string) {
+    return new GenericDataError(error);
   }
 
   private _fuse_withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFieldCondition<T> }) {
@@ -155,6 +157,10 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       return isPassed;
     }
     return true;
+  }
+
+  private _fuse_removeDuplicateString<T = string>(strArray: T[]) {
+    return Array.from(new Set([...strArray]));
   }
 
   private async _fuse_allHelpValidateMarshallAndGetValue(data: any) {
@@ -175,10 +181,6 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       validatedData: value,
       marshalled: marshalledData,
     });
-  }
-
-  private _fuse_removeDuplicateString<T = string>(strArray: T[]) {
-    return Array.from(new Set([...strArray]));
   }
 
   protected async fuse_createOne({ data }: { data: T }) {
@@ -254,7 +256,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     const dataId: string | undefined = data[partitionKeyFieldName];
 
     if (!dataId) {
-      throw new GenericDataError("Update data requires sort key field value");
+      throw this._fuse_createGenericError("Update data requires sort key field value");
     }
 
     const dataMust = this._fuse_getBaseObject({ dataId });
@@ -301,7 +303,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       item: dataInDb,
     });
     if (!isPassed) {
-      throw new GenericDataError("Update condition failed");
+      throw this._fuse_createGenericError("Update condition failed");
     }
 
     const dataMust = this._fuse_getBaseObject({
@@ -335,10 +337,10 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     const { tableFullName, sortKeyFieldName, partitionKeyFieldName } = this._fuse_getLocalVariables();
     //
     if (!paramOptions?.partitionKeyQuery?.equals === undefined) {
-      throw new GenericDataError("Invalid Hash key value");
+      throw this._fuse_createGenericError("Invalid Hash key value");
     }
     if (!sortKeyFieldName) {
-      throw new GenericDataError("Bad query sort configuration");
+      throw this._fuse_createGenericError("Bad query sort configuration");
     }
 
     let sortKeyQuery: any = {};
@@ -350,7 +352,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
           [sortKeyFieldName]: sortKeyQueryData[sortKeyFieldName],
         };
       } else {
-        throw new GenericDataError("Invalid Sort key value");
+        throw this._fuse_createGenericError("Invalid Sort key value");
       }
     }
 
@@ -418,7 +420,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     return result;
   }
 
-  protected async fuse_batchGetManyByIds({
+  protected async fuse_getManyByIds({
     dataIds,
     fields,
     withCondition,
@@ -608,7 +610,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     const { tableFullName, secondaryIndexOptions } = this._fuse_getLocalVariables();
 
     if (!secondaryIndexOptions?.length) {
-      throw new GenericDataError("Invalid secondary index definitions");
+      throw this._fuse_createGenericError("Invalid secondary index definitions");
     }
 
     const {
@@ -626,7 +628,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     });
 
     if (!secondaryIndex) {
-      throw new GenericDataError("Secondary index not named/defined");
+      throw this._fuse_createGenericError("Secondary index not named/defined");
     }
 
     const partitionKeyFieldName = secondaryIndex.keyFieldName as string;
@@ -747,44 +749,5 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       }
     }
     return dataExist;
-  }
-
-  protected async fuse_deleteManyDangerouselyByIds({ dataIds }: { dataIds: string[] }): Promise<boolean> {
-    //
-    const dataIdsNoDuplicates = this._fuse_removeDuplicateString(dataIds);
-    dataIdsNoDuplicates.forEach((sortKeyValue) => {
-      this._fuse_errorHelper.fuse_helper_validateRequiredString({
-        DelSortKey: sortKeyValue,
-      });
-    });
-
-    const {
-      //
-      tableFullName,
-      partitionKeyFieldName,
-      sortKeyFieldName,
-      featureEntityValue,
-    } = this._fuse_getLocalVariables();
-
-    const delArray = dataIdsNoDuplicates.map((dataId) => {
-      const params01: WriteRequest = {
-        DeleteRequest: {
-          Key: {
-            [partitionKeyFieldName]: { S: dataId },
-            [sortKeyFieldName]: { S: featureEntityValue },
-          },
-        },
-      };
-      return params01;
-    });
-
-    const params: BatchWriteItemInput = {
-      RequestItems: {
-        [tableFullName]: delArray,
-      },
-    };
-
-    await this._fuse_dynamoDbInstance().batchWriteItem(params);
-    return true;
   }
 }

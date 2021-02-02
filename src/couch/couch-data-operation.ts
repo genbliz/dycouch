@@ -202,7 +202,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return this._fuse_stripNonRequiredOutputData({ dataObj: data });
   }
 
-  protected async fuse_batchGetManyByIds({
+  protected async fuse_getManyByIds({
     dataIds,
     fields,
     withCondition,
@@ -417,8 +417,12 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     dataId: string;
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T | null> {
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(dataId);
-    if (!(dataInDb?._id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
+
+    const nativeId = this._fuse_getNativePouchId(dataId);
+
+    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+    if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
       return null;
     }
     const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
@@ -437,8 +441,12 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     data: T;
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T> {
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(dataId);
-    if (!(dataInDb?._id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue && dataInDb._rev)) {
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
+
+    const nativeId = this._fuse_getNativePouchId(dataId);
+
+    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+    if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue && dataInDb._rev)) {
       throw this._fuse_createGenericError("Record does not exists");
     }
     const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
@@ -470,7 +478,9 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     dataId: string;
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T> {
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(dataId);
+    const nativeId = this._fuse_getNativePouchId(dataId);
+    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+
     if (!(dataInDb?._id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
       throw this._fuse_createGenericError("Record does not exists");
     }
@@ -483,9 +493,5 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
     }
     return this._fuse_stripNonRequiredOutputData({ dataObj: dataInDb });
-  }
-
-  protected fuse_deleteManyDangerouselyByIds({ dataIds }: { dataIds: string[] }): Promise<boolean> {
-    throw new Error("Method not implemented.");
   }
 }

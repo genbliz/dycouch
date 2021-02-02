@@ -6,7 +6,7 @@ import {
 } from "../types";
 
 export abstract class RepoModel<T> {
-  protected abstract fuse_batchGetManyByIds({
+  protected abstract fuse_getManyByIds({
     dataIds,
     fields,
     withCondition,
@@ -25,8 +25,6 @@ export abstract class RepoModel<T> {
     dataId: string;
     withCondition?: IFieldCondition<T>;
   }): Promise<T>;
-
-  protected abstract fuse_deleteManyDangerouselyByIds({ dataIds }: { dataIds: string[] }): Promise<boolean>;
 
   protected abstract fuse_getManyByCondition(paramOptions: IDynamoQueryParamOptions<T>): Promise<T[]>;
 
