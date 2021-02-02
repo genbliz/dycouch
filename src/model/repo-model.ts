@@ -1,4 +1,9 @@
-import { IFuseFieldCondition, IFuseQueryParamOptions, IFusePagingResult, IFuseQueryIndexOptions } from "../type/types";
+import type {
+  IFuseFieldCondition,
+  IFuseQueryParamOptions,
+  IFusePagingResult,
+  IFuseQueryIndexOptions,
+} from "../type/types";
 
 export abstract class RepoModel<T> {
   protected abstract fuse_getManyByIds({

@@ -2,7 +2,7 @@ import PouchDB from "pouchdb";
 import os from "os";
 import path from "path";
 import fs from "fs";
-import { IFuseCoreEntityModel } from "../core/base-schema";
+import type { IFuseCoreEntityModel } from "../core/base-schema";
 
 PouchDB.plugin(require("pouchdb-find"));
 PouchDB.plugin(require("pouchdb-adapter-node-websql"));

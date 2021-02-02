@@ -1,6 +1,6 @@
+import type { IFuseQueryDefinition } from "../type/types";
 import { BaseRepository } from "./base-repo";
 import Joi from "joi";
-import { IFuseQueryDefinition } from "../";
 
 export interface IPayment {
   amount: number;

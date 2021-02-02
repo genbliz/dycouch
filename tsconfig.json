@@ -16,7 +16,7 @@
     "resolveJsonModule": true,
     "useDefineForClassFields": true,
     "strict": true,
-    "outDir": "./dist/dev",
+    "outDir": "./dist-dev",
     "baseUrl": "./",
     "rootDir": "./src/"
   },

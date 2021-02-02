@@ -1,4 +1,4 @@
-import { IFuseIndexDefinition } from "../type/types";
+import type { IFuseIndexDefinition } from "../type/types";
 import { FuseDataOperationDynamo, FuseInitializerDynamo } from "../";
 import Joi from "joi";
 
