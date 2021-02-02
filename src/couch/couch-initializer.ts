@@ -14,8 +14,8 @@ type IBaseDef<T> = Omit<T, "">;
 interface IOptions {
   couchConfig?: {
     dbUrl: string;
-    password: string;
-    username: string;
+    password?: string;
+    username?: string;
   };
   sqliteConfig?: {
     dbDirectory: string;

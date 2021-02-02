@@ -45,21 +45,21 @@ function createTenantSchema(schemaMapDef: Joi.SchemaMap) {
 type IModelBase = IDynamoDataCoreEntityModel;
 
 export default abstract class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
-  private readonly here_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
-  private readonly here_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
+  private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
+  private readonly _fuse_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
   //
-  private readonly here_dynamoDb: () => DynamoInitializer;
-  private readonly here_dataKeyGenerator: () => string;
-  private readonly here_schema: Joi.Schema;
-  private readonly here_tableFullName: string;
-  private readonly here_strictRequiredFields: string[];
-  private readonly here_featureEntityValue: string;
-  private readonly here_secondaryIndexOptions: ISecondaryIndexDef<T>[];
-  private readonly queryFilter: DynamoFilterQueryOperation;
-  private readonly queryScanProcessor: DynamoQueryScanProcessor;
-  private readonly errorHelper: FuseErrorUtils;
+  private readonly _fuse_dynamoDb: () => DynamoInitializer;
+  private readonly _fuse_dataKeyGenerator: () => string;
+  private readonly _fuse_schema: Joi.Schema;
+  private readonly _fuse_tableFullName: string;
+  private readonly _fuse_strictRequiredFields: string[];
+  private readonly _fuse_featureEntityValue: string;
+  private readonly _fuse_secondaryIndexOptions: ISecondaryIndexDef<T>[];
+  private readonly _fuse_queryFilter: DynamoFilterQueryOperation;
+  private readonly _fuse_queryScanProcessor: DynamoQueryScanProcessor;
+  private readonly _fuse_errorHelper: FuseErrorUtils;
   //
-  private here_tableManager!: DynamoManageTable<T>;
+  private _fuse_tableManager!: DynamoManageTable<T>;
 
   constructor({
     schemaDef,
@@ -71,54 +71,54 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     dataKeyGenerator,
   }: IDynamoOptions<T>) {
     super();
-    this.here_dynamoDb = dynamoDb;
-    this.here_dataKeyGenerator = dataKeyGenerator;
-    this.here_schema = createTenantSchema(schemaDef);
-    this.here_tableFullName = baseTableName;
-    this.here_featureEntityValue = featureEntityValue;
-    this.here_secondaryIndexOptions = secondaryIndexOptions;
-    this.here_strictRequiredFields = strictRequiredFields as string[];
-    this.queryFilter = new DynamoFilterQueryOperation();
-    this.queryScanProcessor = new DynamoQueryScanProcessor();
-    this.errorHelper = new FuseErrorUtils();
+    this._fuse_dynamoDb = dynamoDb;
+    this._fuse_dataKeyGenerator = dataKeyGenerator;
+    this._fuse_schema = createTenantSchema(schemaDef);
+    this._fuse_tableFullName = baseTableName;
+    this._fuse_featureEntityValue = featureEntityValue;
+    this._fuse_secondaryIndexOptions = secondaryIndexOptions;
+    this._fuse_strictRequiredFields = strictRequiredFields as string[];
+    this._fuse_queryFilter = new DynamoFilterQueryOperation();
+    this._fuse_queryScanProcessor = new DynamoQueryScanProcessor();
+    this._fuse_errorHelper = new FuseErrorUtils();
   }
 
   protected fuse_tableManager() {
-    if (!this.here_tableManager) {
-      this.here_tableManager = new DynamoManageTable<T>({
-        dynamoDb: () => this._dynamoDb(),
-        secondaryIndexOptions: this.here_secondaryIndexOptions,
-        tableFullName: this.here_tableFullName,
-        partitionKeyFieldName: this.here_partitionKeyFieldName,
-        sortKeyFieldName: this.here_sortKeyFieldName,
+    if (!this._fuse_tableManager) {
+      this._fuse_tableManager = new DynamoManageTable<T>({
+        dynamoDb: () => this._fuse_dynamoDbInstance(),
+        secondaryIndexOptions: this._fuse_secondaryIndexOptions,
+        tableFullName: this._fuse_tableFullName,
+        partitionKeyFieldName: this._fuse_partitionKeyFieldName,
+        sortKeyFieldName: this._fuse_sortKeyFieldName,
       });
     }
-    return this.here_tableManager;
+    return this._fuse_tableManager;
   }
 
-  private _dynamoDb(): DynamoDB {
-    return this.here_dynamoDb().getInstance();
+  private _fuse_dynamoDbInstance(): DynamoDB {
+    return this._fuse_dynamoDb().getInstance();
   }
 
-  private _generateDynamoTableKey() {
-    return this.here_dataKeyGenerator();
+  private _fuse_generateDynamoTableKey() {
+    return this._fuse_dataKeyGenerator();
   }
 
-  private _getLocalVariables() {
+  private _fuse_getLocalVariables() {
     return {
-      partitionKeyFieldName: this.here_partitionKeyFieldName,
-      sortKeyFieldName: this.here_sortKeyFieldName,
+      partitionKeyFieldName: this._fuse_partitionKeyFieldName,
+      sortKeyFieldName: this._fuse_sortKeyFieldName,
       //
-      featureEntityValue: this.here_featureEntityValue,
+      featureEntityValue: this._fuse_featureEntityValue,
       //
-      tableFullName: this.here_tableFullName,
-      secondaryIndexOptions: this.here_secondaryIndexOptions,
-      strictRequiredFields: this.here_strictRequiredFields,
+      tableFullName: this._fuse_tableFullName,
+      secondaryIndexOptions: this._fuse_secondaryIndexOptions,
+      strictRequiredFields: this._fuse_strictRequiredFields,
     } as const;
   }
 
-  private _getBaseObject({ dataId }: { dataId: string }) {
-    const { partitionKeyFieldName, sortKeyFieldName, featureEntityValue } = this._getLocalVariables();
+  private _fuse_getBaseObject({ dataId }: { dataId: string }) {
+    const { partitionKeyFieldName, sortKeyFieldName, featureEntityValue } = this._fuse_getLocalVariables();
 
     const dataMust = {
       [partitionKeyFieldName]: dataId,
@@ -127,16 +127,16 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     return dataMust;
   }
 
-  private _checkValidateMustBeAnObjectDataType(data: any) {
+  private _fuse_checkValidateMustBeAnObjectDataType(data: any) {
     if (!data || typeof data !== "object") {
       throw new GenericDataError(`Data MUST be valid object`);
     }
   }
 
-  private _checkValidateStrictRequiredFields(onDataObj: any) {
-    this._checkValidateMustBeAnObjectDataType(onDataObj);
+  private _fuse_checkValidateStrictRequiredFields(onDataObj: any) {
+    this._fuse_checkValidateMustBeAnObjectDataType(onDataObj);
 
-    const { strictRequiredFields } = this._getLocalVariables();
+    const { strictRequiredFields } = this._fuse_getLocalVariables();
 
     if (strictRequiredFields?.length) {
       for (const field of strictRequiredFields) {
@@ -147,33 +147,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     }
   }
 
-  protected async fuse_createOne({ data }: { data: T }) {
-    this._checkValidateStrictRequiredFields(data);
-
-    const { tableFullName, partitionKeyFieldName } = this._getLocalVariables();
-
-    let dataId: string | undefined = data[partitionKeyFieldName];
-
-    if (!dataId) {
-      dataId = this._generateDynamoTableKey();
-    }
-
-    const dataMust = this._getBaseObject({ dataId });
-    const fullData = { ...data, ...dataMust };
-
-    const { validatedData, marshalled } = await this._allHelpValidateMarshallAndGetValue(fullData);
-
-    const params: PutItemInput = {
-      TableName: tableFullName,
-      Item: marshalled,
-    };
-
-    await this._dynamoDb().putItem(params);
-    const result: T = validatedData;
-    return result;
-  }
-
-  private _withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFieldCondition<T> }) {
+  private _fuse_withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFieldCondition<T> }) {
     if (item && typeof item === "object" && withCondition?.length) {
       const isPassed = withCondition.every(({ field, equals }) => {
         return item[field] !== undefined && item[field] === equals;
@@ -181,6 +155,56 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       return isPassed;
     }
     return true;
+  }
+
+  private async _fuse_allHelpValidateMarshallAndGetValue(data: any) {
+    const { error, value } = this._fuse_schema.validate(data, {
+      stripUnknown: true,
+    });
+
+    if (error) {
+      const msg = getJoiValidationErrors(error) ?? "Validation error occured";
+      throw this._fuse_errorHelper.fuse_helper_createFriendlyError(msg);
+    }
+    const marshalledData = marshall(value, {
+      convertClassInstanceToMap: true,
+      convertEmptyValues: true,
+      removeUndefinedValues: true,
+    });
+    return await Promise.resolve({
+      validatedData: value,
+      marshalled: marshalledData,
+    });
+  }
+
+  private _fuse_removeDuplicateString<T = string>(strArray: T[]) {
+    return Array.from(new Set([...strArray]));
+  }
+
+  protected async fuse_createOne({ data }: { data: T }) {
+    this._fuse_checkValidateStrictRequiredFields(data);
+
+    const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
+
+    let dataId: string | undefined = data[partitionKeyFieldName];
+
+    if (!dataId) {
+      dataId = this._fuse_generateDynamoTableKey();
+    }
+
+    const dataMust = this._fuse_getBaseObject({ dataId });
+    const fullData = { ...data, ...dataMust };
+
+    const { validatedData, marshalled } = await this._fuse_allHelpValidateMarshallAndGetValue(fullData);
+
+    const params: PutItemInput = {
+      TableName: tableFullName,
+      Item: marshalled,
+    };
+
+    await this._fuse_dynamoDbInstance().putItem(params);
+    const result: T = validatedData;
+    return result;
   }
 
   protected async fuse_getOneById({
@@ -196,9 +220,9 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       sortKeyFieldName,
       featureEntityValue,
       tableFullName,
-    } = this._getLocalVariables();
+    } = this._fuse_getLocalVariables();
 
-    this.errorHelper.fuse_helper_validateRequiredString({
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({
       QueryGetOnePartitionKey: dataId,
       QueryGetOneSortKey: featureEntityValue,
     });
@@ -210,12 +234,12 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
         [sortKeyFieldName]: { S: featureEntityValue },
       },
     };
-    const result = await this._dynamoDb().getItem(params);
+    const result = await this._fuse_dynamoDbInstance().getItem(params);
     const item = result.Item as any;
     if (!item) {
       return null;
     }
-    const isPassed = this._withConditionPassed({ withCondition, item });
+    const isPassed = this._fuse_withConditionPassed({ withCondition, item });
     if (!isPassed) {
       return null;
     }
@@ -223,9 +247,9 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
   }
 
   protected async fuse_updateOneDirect({ data }: { data: T }) {
-    this._checkValidateStrictRequiredFields(data);
+    this._fuse_checkValidateStrictRequiredFields(data);
 
-    const { tableFullName, partitionKeyFieldName } = this._getLocalVariables();
+    const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
 
     const dataId: string | undefined = data[partitionKeyFieldName];
 
@@ -233,11 +257,11 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       throw new GenericDataError("Update data requires sort key field value");
     }
 
-    const dataMust = this._getBaseObject({ dataId });
+    const dataMust = this._fuse_getBaseObject({ dataId });
 
     const fullData = { ...data, ...dataMust };
     //
-    const { validatedData, marshalled } = await this._allHelpValidateMarshallAndGetValue(fullData);
+    const { validatedData, marshalled } = await this._fuse_allHelpValidateMarshallAndGetValue(fullData);
 
     LoggingService.log({ marshalled });
 
@@ -246,7 +270,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       Item: marshalled,
     };
 
-    await this._dynamoDb().putItem(params);
+    await this._fuse_dynamoDbInstance().putItem(params);
     const result: T = validatedData;
     return result;
   }
@@ -260,19 +284,19 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     data: T;
     withCondition?: IFieldCondition<T>;
   }) {
-    this._checkValidateStrictRequiredFields(data);
+    this._fuse_checkValidateStrictRequiredFields(data);
 
-    const { tableFullName, partitionKeyFieldName } = this._getLocalVariables();
+    const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
 
-    this.errorHelper.fuse_helper_validateRequiredString({ Update1DataId: dataId });
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({ Update1DataId: dataId });
 
     const dataInDb = await this.fuse_getOneById({ dataId });
 
     if (!(dataInDb && dataInDb[partitionKeyFieldName])) {
-      throw this.errorHelper.fuse_helper_createFriendlyError("Data does NOT exists");
+      throw this._fuse_errorHelper.fuse_helper_createFriendlyError("Data does NOT exists");
     }
 
-    const isPassed = this._withConditionPassed({
+    const isPassed = this._fuse_withConditionPassed({
       withCondition,
       item: dataInDb,
     });
@@ -280,46 +304,22 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       throw new GenericDataError("Update condition failed");
     }
 
-    const dataMust = this._getBaseObject({
+    const dataMust = this._fuse_getBaseObject({
       dataId: dataInDb[partitionKeyFieldName],
     });
 
     const fullData = { ...dataInDb, ...data, ...dataMust };
 
-    const { validatedData, marshalled } = await this._allHelpValidateMarshallAndGetValue(fullData);
+    const { validatedData, marshalled } = await this._fuse_allHelpValidateMarshallAndGetValue(fullData);
 
     const params: PutItemInput = {
       TableName: tableFullName,
       Item: marshalled,
     };
 
-    await this._dynamoDb().putItem(params);
+    await this._fuse_dynamoDbInstance().putItem(params);
     const result: T = validatedData;
     return result;
-  }
-
-  private async _allHelpValidateMarshallAndGetValue(data: any) {
-    const { error, value } = this.here_schema.validate(data, {
-      stripUnknown: true,
-    });
-
-    if (error) {
-      const msg = getJoiValidationErrors(error) ?? "Validation error occured";
-      throw this.errorHelper.fuse_helper_createFriendlyError(msg);
-    }
-    const marshalledData = marshall(value, {
-      convertClassInstanceToMap: true,
-      convertEmptyValues: true,
-      removeUndefinedValues: true,
-    });
-    return await Promise.resolve({
-      validatedData: value,
-      marshalled: marshalledData,
-    });
-  }
-
-  private _removeDuplicateString<T = string>(strArray: T[]) {
-    return Array.from(new Set([...strArray]));
   }
 
   protected async fuse_getManyByCondition(paramOptions: IDynamoQueryParamOptions<T>) {
@@ -332,7 +332,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
   }
 
   protected async fuse_getManyByConditionPaginate(paramOptions: IDynamoQueryParamOptions<T>) {
-    const { tableFullName, sortKeyFieldName, partitionKeyFieldName } = this._getLocalVariables();
+    const { tableFullName, sortKeyFieldName, partitionKeyFieldName } = this._fuse_getLocalVariables();
     //
     if (!paramOptions?.partitionKeyQuery?.equals === undefined) {
       throw new GenericDataError("Invalid Hash key value");
@@ -354,9 +354,9 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       }
     }
 
-    const fieldKeys = paramOptions?.fields?.length ? this._removeDuplicateString(paramOptions.fields) : undefined;
+    const fieldKeys = paramOptions?.fields?.length ? this._fuse_removeDuplicateString(paramOptions.fields) : undefined;
 
-    const filterHashSortKey = this.queryFilter.fuse__helperDynamoFilterOperation({
+    const filterHashSortKey = this._fuse_queryFilter.fuse__helperDynamoFilterOperation({
       queryDefs: {
         ...sortKeyQuery,
         ...{
@@ -371,7 +371,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     let otherExpressionAttributeValues: any = undefined;
     let otherExpressionAttributeNames: any = undefined;
     if (paramOptions?.query) {
-      const filterOtherAttr = this.queryFilter.fuse__helperDynamoFilterOperation({
+      const filterOtherAttr = this._fuse_queryFilter.fuse__helperDynamoFilterOperation({
         queryDefs: paramOptions.query,
         projectionFields: null,
       });
@@ -409,8 +409,8 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     const hashKeyAndSortKey: [string, string] = [partitionKeyFieldName, sortKeyFieldName];
 
     const paginationObjects = { ...paramOptions.pagingParams };
-    const result = await this.queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
-      dynamoDb: () => this._dynamoDb(),
+    const result = await this._fuse_queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
+      dynamoDb: () => this._fuse_dynamoDbInstance(),
       params,
       hashKeyAndSortKey,
       ...paginationObjects,
@@ -428,12 +428,12 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     withCondition?: IFieldCondition<T>;
   }) {
     dataIds.forEach((dataId) => {
-      this.errorHelper.fuse_helper_validateRequiredString({
+      this._fuse_errorHelper.fuse_helper_validateRequiredString({
         BatchGetDataId: dataId,
       });
     });
 
-    const originalIds = this._removeDuplicateString(dataIds);
+    const originalIds = this._fuse_removeDuplicateString(dataIds);
     const BATCH_SIZE = 80;
 
     const batchIds: string[][] = [];
@@ -447,10 +447,10 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
 
     let result: T[] = [];
 
-    const fieldKeys = fields?.length ? this._removeDuplicateString(fields) : fields;
+    const fieldKeys = fields?.length ? this._fuse_removeDuplicateString(fields) : fields;
 
     for (const batch of batchIds) {
-      const call = await this.__allBatchGetManyByIdsBasePrivate({
+      const call = await this.fuse_batchGetManyByIdsBasePrivate({
         dataIds: batch,
         fields: fieldKeys,
         withCondition,
@@ -461,7 +461,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     return result;
   }
 
-  private async __allBatchGetManyByIdsBasePrivate({
+  private async fuse_batchGetManyByIdsBasePrivate({
     dataIds,
     fields,
     withCondition,
@@ -485,9 +485,9 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
         partitionKeyFieldName,
         sortKeyFieldName,
         featureEntityValue,
-      } = this._getLocalVariables();
+      } = this._fuse_getLocalVariables();
 
-      const dataIdsNoDup = this._removeDuplicateString(dataIds);
+      const dataIdsNoDup = this._fuse_removeDuplicateString(dataIds);
 
       type IKey = Record<string, AttributeValue>;
 
@@ -503,7 +503,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       let expressionAttributeNames: Record<string, string> | undefined = undefined;
 
       if (fields?.length) {
-        const fieldKeys = this._removeDuplicateString(fields);
+        const fieldKeys = this._fuse_removeDuplicateString(fields);
         if (withCondition?.length) {
           /** Add excluded condition */
           withCondition.forEach((condition) => {
@@ -576,7 +576,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
             LoggingService.log({ dynamoBatchGetParams: _params });
             // this._dynamoDb().batchGetItem(_params, batchGetUntilDone);
 
-            this._dynamoDb().batchGetItem(params, (err, resultData) => {
+            this._fuse_dynamoDbInstance().batchGetItem(params, (err, resultData) => {
               batchGetUntilDone(err, resultData);
             });
           } else {
@@ -585,7 +585,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
         }
       };
       // this._dynamoDb().batchGetItem(params, batchGetUntilDone);
-      this._dynamoDb().batchGetItem(params, (err, resultData) => {
+      this._fuse_dynamoDbInstance().batchGetItem(params, (err, resultData) => {
         batchGetUntilDone(err, resultData);
       });
     });
@@ -605,7 +605,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
   protected async fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IDynamoQuerySecondayIndexOptions<TData, TSortKeyField>,
   ) {
-    const { tableFullName, secondaryIndexOptions } = this._getLocalVariables();
+    const { tableFullName, secondaryIndexOptions } = this._fuse_getLocalVariables();
 
     if (!secondaryIndexOptions?.length) {
       throw new GenericDataError("Invalid secondary index definitions");
@@ -639,14 +639,14 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
         }
       : { [partitionKeyFieldName]: partitionKeyQuery.equals };
 
-    const fieldKeys = fields?.length ? this._removeDuplicateString(fields) : undefined;
+    const fieldKeys = fields?.length ? this._fuse_removeDuplicateString(fields) : undefined;
 
     const {
       expressionAttributeValues,
       filterExpression,
       projectionExpressionAttr,
       expressionAttributeNames,
-    } = this.queryFilter.fuse__helperDynamoFilterOperation({
+    } = this._fuse_queryFilter.fuse__helperDynamoFilterOperation({
       queryDefs: partitionSortKeyQuery,
       projectionFields: fieldKeys,
     });
@@ -655,7 +655,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     let otherExpressionAttributeValues: any = undefined;
     let otherExpressionAttributeNames: any = undefined;
     if (query) {
-      const otherAttr = this.queryFilter.fuse__helperDynamoFilterOperation({
+      const otherAttr = this._fuse_queryFilter.fuse__helperDynamoFilterOperation({
         queryDefs: query,
         projectionFields: null,
       });
@@ -695,8 +695,8 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
 
     const hashKeyAndSortKey: [string, string] = [partitionKeyFieldName, sortKeyFieldName];
 
-    const result = await this.queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
-      dynamoDb: () => this._dynamoDb(),
+    const result = await this._fuse_queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
+      dynamoDb: () => this._fuse_dynamoDbInstance(),
       params,
       orderDesc,
       hashKeyAndSortKey,
@@ -713,13 +713,18 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     withCondition?: IFieldCondition<T>;
   }): Promise<T> {
     //
-    this.errorHelper.fuse_helper_validateRequiredString({ Del1SortKey: dataId });
-    const { tableFullName, partitionKeyFieldName, sortKeyFieldName, featureEntityValue } = this._getLocalVariables();
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({ Del1SortKey: dataId });
+    const {
+      tableFullName,
+      partitionKeyFieldName,
+      sortKeyFieldName,
+      featureEntityValue,
+    } = this._fuse_getLocalVariables();
 
     const dataExist = await this.fuse_getOneById({ dataId, withCondition });
 
     if (!(dataExist && dataExist[partitionKeyFieldName])) {
-      throw this.errorHelper.fuse_helper_createFriendlyError("Record does NOT exists");
+      throw this._fuse_errorHelper.fuse_helper_createFriendlyError("Record does NOT exists");
     }
 
     const params: DeleteItemInput = {
@@ -731,12 +736,12 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
     };
 
     try {
-      await this._dynamoDb().deleteItem(params);
+      await this._fuse_dynamoDbInstance().deleteItem(params);
     } catch (err) {
       if (err && err.code === "ResourceNotFoundException") {
-        throw this.errorHelper.fuse_helper_createFriendlyError("Table not found");
+        throw this._fuse_errorHelper.fuse_helper_createFriendlyError("Table not found");
       } else if (err && err.code === "ResourceInUseException") {
-        throw this.errorHelper.fuse_helper_createFriendlyError("Table in use");
+        throw this._fuse_errorHelper.fuse_helper_createFriendlyError("Table in use");
       } else {
         throw err;
       }
@@ -746,9 +751,9 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
 
   protected async fuse_deleteManyDangerouselyByIds({ dataIds }: { dataIds: string[] }): Promise<boolean> {
     //
-    const dataIdsNoDuplicates = this._removeDuplicateString(dataIds);
+    const dataIdsNoDuplicates = this._fuse_removeDuplicateString(dataIds);
     dataIdsNoDuplicates.forEach((sortKeyValue) => {
-      this.errorHelper.fuse_helper_validateRequiredString({
+      this._fuse_errorHelper.fuse_helper_validateRequiredString({
         DelSortKey: sortKeyValue,
       });
     });
@@ -759,7 +764,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       partitionKeyFieldName,
       sortKeyFieldName,
       featureEntityValue,
-    } = this._getLocalVariables();
+    } = this._fuse_getLocalVariables();
 
     const delArray = dataIdsNoDuplicates.map((dataId) => {
       const params01: WriteRequest = {
@@ -779,7 +784,7 @@ export default abstract class DynamoDataOperation<T> extends RepoModel<T> implem
       },
     };
 
-    await this._dynamoDb().batchWriteItem(params);
+    await this._fuse_dynamoDbInstance().batchWriteItem(params);
     return true;
   }
 }
