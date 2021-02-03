@@ -1,10 +1,5 @@
 import { RepoModel } from "../model/repo-model";
-import type {
-  IFuseQueryParamOptions,
-  IFuseIndexDefinition,
-  IFuseFieldCondition,
-  IFuseQueryIndexOptions,
-} from "../type/types";
+import type { IFuseIndexDefinition, IFuseFieldCondition, IFuseQueryIndexOptions } from "../type/types";
 import { FuseErrorUtils, GenericDataError } from "./../helpers/errors";
 import type {
   DynamoDB,
@@ -324,6 +319,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return result;
   }
 
+  /*
   protected async fuse_getManyByCondition(paramOptions: IFuseQueryParamOptions<T>) {
     paramOptions.pagingParams = undefined;
     const result = await this.fuse_getManyByConditionPaginate(paramOptions);
@@ -419,6 +415,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     });
     return result;
   }
+*/
 
   protected async fuse_getManyByIds({
     dataIds,

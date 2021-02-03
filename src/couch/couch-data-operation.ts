@@ -3,7 +3,6 @@ import type {
   IFuseIndexDefinition,
   IFusePagingResult,
   IFuseQueryIndexOptions,
-  IFuseQueryParamOptions,
 } from "../type/types";
 import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
@@ -329,58 +328,6 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
       });
     }
     return dataList;
-  }
-
-  protected async fuse_getManyByCondition(paramOptions: IFuseQueryParamOptions<T, any>): Promise<T[]> {
-    if (!paramOptions?.query) {
-      throw this._fuse_createGenericError("Invalid query object");
-    }
-
-    paramOptions.query = {
-      ...paramOptions.query,
-      featureEntity: this._fuse_featureEntityValue,
-    };
-
-    const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({
-      queryDefs: paramOptions.query,
-    });
-
-    const data = await this._fuse_couchDbInstance().find({
-      selector: { ...queryDefData },
-      fields: paramOptions?.fields?.length ? this._fuse_removeDuplicateString(paramOptions.fields as any) : undefined,
-    });
-    const dataList = data?.docs?.map((item) => {
-      return this._fuse_stripNonRequiredOutputData({ dataObj: item });
-    });
-    return dataList || [];
-  }
-
-  protected async fuse_getManyByConditionPaginate(
-    paramOptions: IFuseQueryParamOptions<T, any>,
-  ): Promise<IFusePagingResult<T[]>> {
-    if (!paramOptions?.query) {
-      throw this._fuse_createGenericError("Invalid query object");
-    }
-
-    paramOptions.query = {
-      ...paramOptions.query,
-      featureEntity: this._fuse_featureEntityValue,
-    };
-
-    const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({
-      queryDefs: paramOptions.query,
-    });
-
-    const data = await this._fuse_couchDbInstance().find({
-      selector: { ...queryDefData },
-      fields: paramOptions?.fields?.length ? this._fuse_removeDuplicateString(paramOptions.fields as any) : undefined,
-    });
-    const dataList = data?.docs?.map((item) => {
-      return this._fuse_stripNonRequiredOutputData({ dataObj: item });
-    });
-    return {
-      mainResult: dataList,
-    };
   }
 
   protected async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(

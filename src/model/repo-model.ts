@@ -1,9 +1,4 @@
-import type {
-  IFuseFieldCondition,
-  IFuseQueryParamOptions,
-  IFusePagingResult,
-  IFuseQueryIndexOptions,
-} from "../type/types";
+import type { IFuseFieldCondition, IFusePagingResult, IFuseQueryIndexOptions } from "../type/types";
 
 export abstract class RepoModel<T> {
   protected abstract fuse_getManyByIds({
@@ -25,12 +20,6 @@ export abstract class RepoModel<T> {
     dataId: string;
     withCondition?: IFuseFieldCondition<T>;
   }): Promise<T>;
-
-  protected abstract fuse_getManyByCondition(paramOptions: IFuseQueryParamOptions<T>): Promise<T[]>;
-
-  protected abstract fuse_getManyByConditionPaginate(
-    paramOptions: IFuseQueryParamOptions<T>,
-  ): Promise<IFusePagingResult<T[]>>;
 
   protected abstract fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
