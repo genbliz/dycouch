@@ -443,7 +443,7 @@ export class DynamoManageTable<T> {
           new Date().toTimeString(),
         ].join(" "),
       );
-      return result.TableDescription;
+      return result.TableDescription?.TableName;
     }
     return null;
   }
@@ -463,7 +463,7 @@ export class DynamoManageTable<T> {
     };
     const result = await this._tbl_dynamoDb().updateTable(params);
     if (result?.TableDescription) {
-      return result.TableDescription;
+      return result.TableDescription?.TableName;
     }
     return null;
   }
