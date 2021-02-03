@@ -52,31 +52,6 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
     });
   }
 
-  getIt() {
-    return this.fuse_getManyByCondition({
-      partitionKeyQuery: {
-        equals: 0,
-      },
-      fields: ["amount", "category"],
-      query: {
-        amount: { $gt: 0 },
-        category: { $gt: "Nunu" },
-        $or: [
-          { amount: { $contains: _searchTerm } },
-          { category: { $contains: _searchTerm } },
-          { invoiceId: { $contains: _searchTerm } },
-          { transactionId: { $contains: _searchTerm } },
-          { remark: { $contains: _searchTerm } },
-        ],
-        $and: [
-          //
-          { category: { $contains: _searchTerm } },
-          { invoiceId: { $contains: _searchTerm } },
-        ],
-      },
-    });
-  }
-
   async create() {
     await this.fuse_updateOneById({
       dataId: "",
