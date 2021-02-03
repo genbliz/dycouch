@@ -8,8 +8,8 @@ import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
 import { FuseInitializerCouch } from "./couch-initializer";
 import { coreSchemaDefinition, IFuseCoreEntityModel } from "../core/base-schema";
-import { FuseErrorUtils, GenericDataError } from "src/helpers/errors";
-import { getJoiValidationErrors } from "src/helpers/base-joi-helper";
+import { FuseErrorUtils, GenericDataError } from "../helpers/errors";
+import { getJoiValidationErrors } from "../helpers/base-joi-helper";
 import { CouchFilterQueryOperation } from "./couch-filter-query-operation";
 
 interface IDynamoOptions<T> {
@@ -204,7 +204,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return this._fuse_stripNonRequiredOutputData({ dataObj: data });
   }
 
-  async fuse_getAll(): Promise<T[]> {
+  protected async fuse_getAll(): Promise<T[]> {
     const data = await this._fuse_couchDbInstance().allDocs<IFullEntity<T>>({
       include_docs: true,
       startkey: this._fuse_featureEntityValue,
