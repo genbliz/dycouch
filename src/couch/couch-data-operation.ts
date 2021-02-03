@@ -79,10 +79,8 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
   }
 
   private _fuse_couchDbInstance() {
-    return this._fuse_couchDb().getInstance();
+    return this._fuse_couchDb().getInstance(this._fuse_tableFullName);
   }
-
-  // export type IFullEntity<T> = ICoreEntityBaseModel & T;
 
   private _fuse_getLocalVariables() {
     return {
@@ -91,7 +89,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
       //
       featureEntityValue: this._fuse_featureEntityValue,
       //
-      tableFullName: this._fuse_tableFullName,
+      // tableFullName: this._fuse_tableFullName,
       secondaryIndexOptions: this._fuse_secondaryIndexOptions,
       strictRequiredFields: this._fuse_strictRequiredFields,
     } as const;
@@ -343,26 +341,13 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
       featureEntity: this._fuse_featureEntityValue,
     };
 
-    const _normalizeFields = (fields: (keyof T)[] | string[]) => {
-      if (fields?.length) {
-        const fieldList: string[] = [];
-        for (const field of fields as string[]) {
-          fieldList.push(field);
-        }
-        if (fieldList.length) {
-          return this._fuse_removeDuplicateString(fieldList);
-        }
-      }
-      return undefined;
-    };
-
     const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({
       queryDefs: paramOptions.query,
     });
 
     const data = await this._fuse_couchDbInstance().find({
       selector: { ...queryDefData },
-      fields: _normalizeFields(paramOptions?.fields || []),
+      fields: paramOptions?.fields?.length ? this._fuse_removeDuplicateString(paramOptions.fields as any) : undefined,
     });
     const dataList = data?.docs?.map((item) => {
       return this._fuse_stripNonRequiredOutputData({ dataObj: item });
@@ -382,26 +367,13 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
       featureEntity: this._fuse_featureEntityValue,
     };
 
-    const _normalizeFields0 = (fields: (keyof T)[] | string[]) => {
-      if (fields?.length) {
-        const fieldList: string[] = [];
-        for (const field of fields as string[]) {
-          fieldList.push(field);
-        }
-        if (fieldList.length) {
-          return this._fuse_removeDuplicateString(fieldList);
-        }
-      }
-      return undefined;
-    };
-
     const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({
       queryDefs: paramOptions.query,
     });
 
     const data = await this._fuse_couchDbInstance().find({
       selector: { ...queryDefData },
-      fields: _normalizeFields(paramOptions?.fields || []),
+      fields: paramOptions?.fields?.length ? this._fuse_removeDuplicateString(paramOptions.fields as any) : undefined,
     });
     const dataList = data?.docs?.map((item) => {
       return this._fuse_stripNonRequiredOutputData({ dataObj: item });
@@ -411,107 +383,96 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     };
   }
 
-  protected fuse_getManyByIndex<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyByIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<T[]> {
-    throw new Error("Method not implemented.");
+    paramOption.pagingParams = undefined;
+    const result = await this.fuse_getManyByIndexPaginate(paramOption);
+    if (result?.mainResult) {
+      return result.mainResult;
+    }
+    return [];
   }
 
-  protected fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<IFusePagingResult<T[]>> {
-    throw new Error("Method not implemented.");
+    const { secondaryIndexOptions } = this._fuse_getLocalVariables();
+
+    if (!secondaryIndexOptions?.length) {
+      throw this._fuse_createGenericError("Invalid secondary index definitions");
+    }
+
+    if (!paramOption?.indexName) {
+      throw this._fuse_createGenericError("Invalid index name input");
+    }
+
+    const secondaryIndex = secondaryIndexOptions.find((item) => {
+      return item.indexName === paramOption.indexName;
+    });
+
+    if (!secondaryIndex) {
+      throw this._fuse_createGenericError("Secondary index not named/defined");
+    }
+
+    const partitionKeyFieldName = secondaryIndex.keyFieldName as string;
+    const sortKeyFieldName = secondaryIndex.sortFieldName as string;
+
+    const partitionSortKeyQuery = paramOption.sortKeyQuery
+      ? {
+          ...{ [sortKeyFieldName]: paramOption.sortKeyQuery },
+          ...{ [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+        }
+      : { [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+
+    const queryDefs = {
+      ...paramOption.query,
+      ...partitionSortKeyQuery,
+    };
+
+    const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({
+      queryDefs,
+    });
+
+    const query01: any = {};
+    const query02: any = {};
+    const query03: any = {};
+
+    Object.entries(queryDefData).forEach(([key, val]) => {
+      if (key === partitionKeyFieldName) {
+        query01[key] = val;
+      } else if (key === sortKeyFieldName) {
+        query02[key] = val;
+      } else {
+        query03[key] = val;
+      }
+    });
+
+    const queryDefDataOrdered = { ...query01, ...query02, ...query03 };
+    const sort01: Array<{ [propName: string]: "asc" | "desc" }> = [];
+
+    if (paramOption?.pagingParams?.orderDesc) {
+      sort01.push({ [sortKeyFieldName]: "desc" });
+    } else {
+      sort01.push({ [sortKeyFieldName]: "asc" });
+    }
+
+    const data = await this._fuse_couchDbInstance().find({
+      selector: { ...queryDefDataOrdered },
+      fields: paramOption?.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields as any) : undefined,
+      use_index: paramOption.indexName,
+      sort: sort01,
+      limit: paramOption?.pagingParams?.pageSize ?? undefined,
+    });
+
+    const dataList = data?.docs?.map((item) => {
+      return this._fuse_stripNonRequiredOutputData({ dataObj: item });
+    });
+
+    return {
+      mainResult: dataList,
+    };
   }
-
-  // protected async fuse_getManyByIndexPaginate00<TData = T, TSortKeyField = string>(
-  //   paramOption: IFuseQuerySecondayIndexOptions<TData, TSortKeyField>,
-  // ): Promise<IFusePagingResult<T[]>> {
-  //   if (!paramOption?.query) {
-  //     throw new GenericDataError("Invalid query object");
-  //   }
-  //   if (paramOption.indexName) {
-  //     throw new GenericDataError("Index MUST be defined for sort query");
-  //   }
-
-  //   paramOption.query = {
-  //     ...paramOption.query,
-  //     featureEntity: this.here_featureEntityValue,
-  //   };
-
-  //   const _normalizeFields = (fields: (keyof T)[] | string[]) => {
-  //     if (fields?.length) {
-  //       const fieldList: string[] = [];
-  //       for (const field of fields as string[]) {
-  //         if (field === "id") {
-  //           fieldList.push("_id");
-  //         } else {
-  //           fieldList.push(field);
-  //         }
-  //       }
-  //       if (fieldList.length) {
-  //         return this._root_removeDuplicateString(fieldList);
-  //       }
-  //     }
-  //     return undefined;
-  //   };
-
-  //   let paramsSort: Array<string | { [propName: string]: "asc" | "desc" }> | undefined = undefined;
-
-  //   const indexOpt = this._indexOptions.find((f) => f.indexName === params.indexName);
-  //   if (indexOpt?.fields?.length) {
-  //     const query00: any = { ...paramOption.query };
-  //     const query01: any = {};
-  //     const query02: any = {};
-  //     for (const indexOrder of indexOpt.fields) {
-  //       if (query00[indexOrder] !== undefined) {
-  //         query01[indexOrder] = query00[indexOrder];
-  //       }
-  //     }
-  //     Object.entries(query00).forEach(([key, val]) => {
-  //       if (query01[key] === undefined) {
-  //         query02[key] = val;
-  //       }
-  //     });
-  //     console.log({ query01, query02 });
-  //     paramOption.query = { ...query01, ...query02 };
-  //     //
-  //     if (paramOption.pagingParams?.orderDesc) {
-  //       if (Array.isArray(params.sort)) {
-  //         if (params.sort.length) {
-  //           paramsSort = [...params.sort] as any[];
-  //         }
-  //       } else {
-  //         const sort00 = [...params.sort?.advanced];
-  //         const sort01: Array<{ [propName: string]: "asc" | "desc" }> = [];
-
-  //         for (const fieldName of indexOpt.fields) {
-  //           const sortFind = sort00.find((f) => f.field === fieldName);
-  //           if (sortFind && typeof sortFind === "object" && sortFind.field) {
-  //             sort01.push({ [sortFind.field]: sortFind.sortType });
-  //           }
-  //         }
-  //         if (sort01.length) {
-  //           paramsSort = [...sort01];
-  //         }
-  //         console.log({ sort01 });
-  //       }
-  //     }
-  //   }
-
-  //   console.log({ indexName: params.indexName });
-  //   const data = await this._couchDbInstance().find({
-  //     selector: { ...paramOption.query },
-  //     fields: _normalizeFields(paramOption.fields),
-  //     limit: params.limit || undefined,
-  //     skip: params.skip || undefined,
-  //     sort: paramsSort,
-  //     use_index: params.indexName ? params.indexName : undefined,
-  //   });
-  //   const dataList = data?.docs?.map((item) => {
-  //     return this._root_stripNonRequiredData(item);
-  //   });
-  //   return dataList;
-  // }
 
   protected async fuse_deleteById({
     dataId,

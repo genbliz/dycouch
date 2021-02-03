@@ -612,19 +612,12 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     if (!secondaryIndexOptions?.length) {
       throw this._fuse_createGenericError("Invalid secondary index definitions");
     }
-
-    const {
-      //
-      indexName,
-      partitionKeyQuery,
-      sortKeyQuery,
-      fields,
-      pagingParams,
-      query,
-    } = paramOption;
+    if (!paramOption?.indexName) {
+      throw this._fuse_createGenericError("Invalid index name input");
+    }
 
     const secondaryIndex = secondaryIndexOptions.find((item) => {
-      return item.indexName === indexName;
+      return item.indexName === paramOption.indexName;
     });
 
     if (!secondaryIndex) {
@@ -634,14 +627,14 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     const partitionKeyFieldName = secondaryIndex.keyFieldName as string;
     const sortKeyFieldName = secondaryIndex.sortFieldName as string;
 
-    const partitionSortKeyQuery = sortKeyQuery
+    const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
-          ...{ [sortKeyFieldName]: sortKeyQuery },
-          ...{ [partitionKeyFieldName]: partitionKeyQuery.equals },
+          ...{ [sortKeyFieldName]: paramOption.sortKeyQuery },
+          ...{ [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
         }
-      : { [partitionKeyFieldName]: partitionKeyQuery.equals };
+      : { [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
 
-    const fieldKeys = fields?.length ? this._fuse_removeDuplicateString(fields) : undefined;
+    const fieldKeys = paramOption.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields) : undefined;
 
     const {
       expressionAttributeValues,
@@ -656,9 +649,9 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     let otherFilterExpression: string | undefined = undefined;
     let otherExpressionAttributeValues: any = undefined;
     let otherExpressionAttributeNames: any = undefined;
-    if (query) {
+    if (paramOption.query) {
       const otherAttr = this._fuse_queryFilter.fuse__helperDynamoFilterOperation({
-        queryDefs: query,
+        queryDefs: paramOption.query,
         projectionFields: null,
       });
 
@@ -672,7 +665,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
 
     const params: QueryInput = {
       TableName: tableFullName,
-      IndexName: indexName,
+      IndexName: paramOption.indexName,
       KeyConditionExpression: filterExpression,
       ExpressionAttributeValues: {
         ...otherExpressionAttributeValues,
@@ -685,7 +678,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
       },
     };
 
-    const orderDesc = pagingParams?.orderDesc === true;
+    const orderDesc = paramOption.pagingParams?.orderDesc === true;
 
     if (orderDesc) {
       params.ScanIndexForward = false;
@@ -702,7 +695,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
       params,
       orderDesc,
       hashKeyAndSortKey,
-      ...pagingParams,
+      ...(paramOption.pagingParams || {}),
     });
     return result;
   }
