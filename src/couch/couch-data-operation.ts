@@ -383,18 +383,18 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     };
   }
 
-  protected async fuse_getManyByIndex<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<T[]> {
     paramOption.pagingParams = undefined;
-    const result = await this.fuse_getManyByIndexPaginate(paramOption);
+    const result = await this.fuse_getManyBySecondaryIndexPaginate(paramOption);
     if (result?.mainResult) {
       return result.mainResult;
     }
     return [];
   }
 
-  protected async fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<IFusePagingResult<T[]>> {
     const { secondaryIndexOptions } = this._fuse_getLocalVariables();

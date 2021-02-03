@@ -593,18 +593,18 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     });
   }
 
-  protected async fuse_getManyByIndex<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ) {
     paramOption.pagingParams = undefined;
-    const result = await this.fuse_getManyByIndexPaginate<TData, TSortKeyField>(paramOption);
+    const result = await this.fuse_getManyBySecondaryIndexPaginate<TData, TSortKeyField>(paramOption);
     if (result?.mainResult) {
       return result.mainResult;
     }
     return [];
   }
 
-  protected async fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
+  protected async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ) {
     const { tableFullName, secondaryIndexOptions } = this._fuse_getLocalVariables();

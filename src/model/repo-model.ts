@@ -32,11 +32,11 @@ export abstract class RepoModel<T> {
     paramOptions: IFuseQueryParamOptions<T>,
   ): Promise<IFusePagingResult<T[]>>;
 
-  protected abstract fuse_getManyByIndex<TData = T, TSortKeyField = string>(
+  protected abstract fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<T[]>;
 
-  protected abstract fuse_getManyByIndexPaginate<TData = T, TSortKeyField = string>(
+  protected abstract fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<IFusePagingResult<T[]>>;
 
