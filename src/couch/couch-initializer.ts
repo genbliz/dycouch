@@ -51,7 +51,7 @@ export class FuseInitializerCouch {
     return new PouchDB<IBaseDef<IFuseCoreEntityModel>>(dbUrl);
   }
 
-  getInstance<T>(sqliteDbName?: string): PouchDB.Database<IBaseDef<T>> {
+  getInstance<T>(sqliteDbName: string): PouchDB.Database<IBaseDef<T>> {
     if (!this._databaseInstance) {
       if (this.couchConfig?.dbUrl) {
         this._databaseInstance = this.createHttpInstance({
@@ -105,16 +105,16 @@ export class FuseInitializerCouch {
     return this._databaseInstance;
   }
 
-  compactDb() {
-    this._databaseInstance
-      .compact({ interval: undefined })
-      .then((info) => {
-        // compaction complete
-        console.log("compaction complete");
-      })
-      .catch((err) => {
-        // handle errors
-        console.log("compaction erros", err);
-      });
-  }
+  // compactDb() {
+  //   this._databaseInstance
+  //     .compact({ interval: undefined })
+  //     .then((info) => {
+  //       // compaction complete
+  //       console.log("compaction complete");
+  //     })
+  //     .catch((err) => {
+  //       // handle errors
+  //       console.log("compaction erros", err);
+  //     });
+  // }
 }

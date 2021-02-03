@@ -115,7 +115,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
 
   private _fuse_getNativePouchId(dataId: string) {
     const { featureEntityValue } = this._fuse_getLocalVariables();
-    return [featureEntityValue, dataId].join("#");
+    return [`${featureEntityValue}:`, featureEntityValue, "#", dataId].join("");
   }
 
   private _fuse_getBaseObject({ dataId }: { dataId: string }) {
@@ -214,8 +214,8 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     const dataList: T[] = [];
     data?.rows?.forEach((item) => {
       if (item?.doc?.featureEntity === this._fuse_featureEntityValue) {
-        const k = this._fuse_stripNonRequiredOutputData({ dataObj: item.doc });
-        dataList.push(k);
+        const doc = this._fuse_stripNonRequiredOutputData({ dataObj: item.doc });
+        dataList.push(doc);
       }
     });
     return dataList;
