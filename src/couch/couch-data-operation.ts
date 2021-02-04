@@ -422,7 +422,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     const sort01: Array<{ [propName: string]: "asc" | "desc" }> = [];
 
     if (paramOption?.pagingParams?.orderDesc) {
-      sort01.push({ [partitionKeyFieldName]: "asc" });
+      sort01.push({ [partitionKeyFieldName]: "desc" });
       sort01.push({ [sortKeyFieldName]: "desc" });
     } else {
       sort01.push({ [partitionKeyFieldName]: "asc" });
@@ -432,7 +432,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     LoggingService.log({
       queryDefDataOrdered,
       sort: sort01,
-      indexName: paramOption.indexName,
+      paramOption,
     });
 
     const data = await this._fuse_couchDbInstance().find({
