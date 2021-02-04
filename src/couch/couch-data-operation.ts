@@ -425,10 +425,15 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
       sort01.push({ [partitionKeyFieldName]: "asc" });
       sort01.push({ [sortKeyFieldName]: "desc" });
     } else {
-      // sort01.push({ [sortKeyFieldName]: "asc" });
+      sort01.push({ [partitionKeyFieldName]: "asc" });
+      sort01.push({ [sortKeyFieldName]: "asc" });
     }
 
-    LoggingService.log({ queryDefDataOrdered, sort: sort01 });
+    LoggingService.log({
+      queryDefDataOrdered,
+      sort: sort01,
+      indexName: paramOption.indexName,
+    });
 
     const data = await this._fuse_couchDbInstance().find({
       selector: { ...queryDefDataOrdered },

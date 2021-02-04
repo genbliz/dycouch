@@ -1,3 +1,4 @@
+import { LoggingService } from "./../helpers/logging-service";
 import { IFuseIndexDefinition } from "./../type/types";
 
 interface ITableOptions<T> {
@@ -46,9 +47,10 @@ export class CouchManageTable<T> {
         name: indexName,
         fields: fields,
         ddoc: indexName,
+        type: "json",
       },
     });
-    console.log(result?.result);
+    LoggingService.log(result);
     return result?.result;
   }
 
@@ -75,8 +77,10 @@ export class CouchManageTable<T> {
               name: indexOption.indexName,
               fields: [indexOption.keyFieldName, indexOption.sortFieldName] as any[],
               ddoc: indexOption.indexName,
+              type: "json",
             },
           });
+          LoggingService.log(resultData);
           results.push(resultData.result);
         }
       }
