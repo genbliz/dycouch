@@ -12,7 +12,7 @@ import type {
   ProjectionType,
 } from "@aws-sdk/client-dynamodb";
 
-interface IDynamoOptions<T> {
+interface ITableOptions<T> {
   dynamoDb: () => DynamoDB;
   secondaryIndexOptions: IFuseIndexDefinition<T>[];
   tableFullName: string;
@@ -33,7 +33,7 @@ export class DynamoManageTable<T> {
     tableFullName,
     partitionKeyFieldName,
     sortKeyFieldName,
-  }: IDynamoOptions<T>) {
+  }: ITableOptions<T>) {
     this.dynamoDb = dynamoDb;
     this.tableFullName = tableFullName;
     this.partitionKeyFieldName = partitionKeyFieldName;

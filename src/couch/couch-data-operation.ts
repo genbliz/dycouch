@@ -11,6 +11,7 @@ import { coreSchemaDefinition, IFuseCoreEntityModel } from "../core/base-schema"
 import { FuseErrorUtils, GenericDataError } from "../helpers/errors";
 import { getJoiValidationErrors } from "../helpers/base-joi-helper";
 import { CouchFilterQueryOperation } from "./couch-filter-query-operation";
+import { CouchManageTable } from "./couch-manage-table";
 
 interface IDynamoOptions<T> {
   schemaDef: Joi.SchemaMap;
@@ -41,6 +42,8 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
   private readonly _fuse_secondaryIndexOptions: IFuseIndexDefinition<T>[];
   private readonly _fuse_errorHelper: FuseErrorUtils;
   private readonly _fuse_filterQueryOperation = new CouchFilterQueryOperation();
+  //
+  private _fuse_tableManager!: CouchManageTable<T>;
 
   constructor({
     schemaDef,
@@ -71,6 +74,19 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
       ...fullSchemaMapDef,
       _id: Joi.string().required().min(5).max(1500),
     });
+  }
+
+  protected fuse_tableManager() {
+    if (!this._fuse_tableManager) {
+      this._fuse_tableManager = new CouchManageTable<T>({
+        couchDb: () => this._fuse_couchDbInstance(),
+        secondaryIndexOptions: this._fuse_secondaryIndexOptions,
+        tableFullName: this._fuse_tableFullName,
+        partitionKeyFieldName: this._fuse_partitionKeyFieldName,
+        sortKeyFieldName: this._fuse_sortKeyFieldName,
+      });
+    }
+    return this._fuse_tableManager;
   }
 
   private _fuse_generateDynamoTableKey() {
