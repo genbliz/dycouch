@@ -18,7 +18,8 @@ interface IOptions {
     username?: string;
   };
   sqliteConfig?: {
-    dbDirectory: string;
+    dbDirectory?: string;
+    canSplitDb?: boolean;
   };
 }
 
@@ -27,10 +28,12 @@ export class FuseInitializerCouch {
 
   private readonly couchConfig: IOptions["couchConfig"];
   private readonly sqliteConfig: IOptions["sqliteConfig"];
+  readonly sqliteSplitDb: boolean;
 
-  constructor({ couchConfig, sqliteConfig }: IOptions) {
+  constructor({ couchConfig, sqliteConfig }: IOptions = {}) {
     this.couchConfig = couchConfig;
     this.sqliteConfig = sqliteConfig;
+    this.sqliteSplitDb = sqliteConfig?.canSplitDb === true;
   }
 
   private createWebSqlInstance({ dbPath }: { dbPath: string }) {

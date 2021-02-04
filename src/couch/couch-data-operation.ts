@@ -95,7 +95,11 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
   }
 
   private _fuse_couchDbInstance() {
-    return this._fuse_couchDb().getInstance(this._fuse_tableFullName);
+    const inst = this._fuse_couchDb();
+    if (inst.sqliteSplitDb) {
+      return inst.getInstance(this._fuse_featureEntityValue);
+    }
+    return inst.getInstance(this._fuse_tableFullName);
   }
 
   private _fuse_getLocalVariables() {
