@@ -1,3 +1,4 @@
+import { LoggingService } from "./../helpers/logging-service";
 import type {
   IFuseFieldCondition,
   IFuseIndexDefinition,
@@ -220,11 +221,13 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return this._fuse_stripNonRequiredOutputData({ dataObj: data });
   }
 
-  protected async fuse_getAll(): Promise<T[]> {
+  protected async fuse_getAll({ size, skip }: { size?: number; skip?: number } = {}): Promise<T[]> {
     const data = await this._fuse_couchDbInstance().allDocs<IFullEntity<T>>({
       include_docs: true,
       startkey: this._fuse_featureEntityValue,
       endkey: `${this._fuse_featureEntityValue}\ufff0`,
+      limit: size,
+      skip,
     });
     const dataList: T[] = [];
     data?.rows?.forEach((item) => {
@@ -415,16 +418,19 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     const sort01: Array<{ [propName: string]: "asc" | "desc" }> = [];
 
     if (paramOption?.pagingParams?.orderDesc) {
+      sort01.push({ [partitionKeyFieldName]: "asc" });
       sort01.push({ [sortKeyFieldName]: "desc" });
     } else {
-      sort01.push({ [sortKeyFieldName]: "asc" });
+      // sort01.push({ [sortKeyFieldName]: "asc" });
     }
+
+    LoggingService.log({ queryDefDataOrdered, sort: sort01 });
 
     const data = await this._fuse_couchDbInstance().find({
       selector: { ...queryDefDataOrdered },
       fields: paramOption?.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields as any) : undefined,
       use_index: paramOption.indexName,
-      sort: sort01,
+      sort: sort01?.length ? sort01 : undefined,
       limit: paramOption?.pagingParams?.pageSize ?? undefined,
     });
 
@@ -447,7 +453,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     const nativeId = this._fuse_getNativePouchId(dataId);
     const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
 
-    if (!(dataInDb?._id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
+    if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
       throw this._fuse_createGenericError("Record does not exists");
     }
     const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
