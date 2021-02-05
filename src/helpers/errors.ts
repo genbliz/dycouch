@@ -1,10 +1,4 @@
-export class GenericDataError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-export class GenericFriendlyError extends Error {
+export class FuseGenericError extends Error {
   constructor(message: string) {
     super(message);
   }
@@ -19,12 +13,12 @@ export class FuseErrorUtils {
       }
     });
     if (errors.length) {
-      throw new GenericDataError(`${errors.join("; ")}.`);
+      throw new FuseGenericError(`${errors.join("; ")}.`);
     }
   }
 
   fuse_helper_createFriendlyError(message: string, statusCode?: number) {
-    return new GenericDataError(message);
+    return new FuseGenericError(message);
   }
 
   fuse_helper_validateRequiredString(keyValueValidates: { [key: string]: string }) {
@@ -35,7 +29,7 @@ export class FuseErrorUtils {
       }
     });
     if (errors.length) {
-      throw new GenericDataError(`${errors.join("; ")}.`);
+      throw new FuseGenericError(`${errors.join("; ")}.`);
     }
   }
 }

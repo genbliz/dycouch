@@ -9,7 +9,7 @@ import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
 import { FuseInitializerCouch } from "./couch-initializer";
 import { coreSchemaDefinition, IFuseCoreEntityModel } from "../core/base-schema";
-import { FuseErrorUtils, GenericDataError } from "../helpers/errors";
+import { FuseErrorUtils, FuseGenericError } from "../helpers/errors";
 import { getJoiValidationErrors } from "../helpers/base-joi-helper";
 import { CouchFilterQueryOperation } from "./couch-filter-query-operation";
 import { CouchManageTable } from "./couch-manage-table";
@@ -199,7 +199,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
   }
 
   private _fuse_createGenericError(error: string) {
-    return new GenericDataError(error);
+    return new FuseGenericError(error);
   }
 
   protected async fuse_createOne({ data }: { data: T }): Promise<T> {
@@ -211,6 +211,10 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
 
     if (!dataId) {
       dataId = this._fuse_generateDynamoTableKey();
+    }
+
+    if (!(dataId && typeof dataId === "string")) {
+      throw this._fuse_createGenericError("Invalid dataId generation");
     }
 
     const dataMust = this._fuse_getBaseObject({ dataId });

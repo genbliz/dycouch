@@ -11,7 +11,7 @@ export type {
 } from "./type/types";
 
 export { IFuseCoreEntityModel } from "./core/base-schema";
-export { GenericDataError, GenericFriendlyError } from "./helpers/errors";
+export { FuseGenericError } from "./helpers/errors";
 import DynamoDataOp from "./dynamo/dynamo-data-operation";
 import CouchDataOp from "./couch/couch-data-operation";
 export { FuseInitializerDynamo } from "./dynamo/dynamo-initializer";

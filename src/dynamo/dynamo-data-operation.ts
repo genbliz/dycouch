@@ -1,6 +1,6 @@
 import { RepoModel } from "../model/repo-model";
 import type { IFuseIndexDefinition, IFuseFieldCondition, IFuseQueryIndexOptions } from "../type/types";
-import { FuseErrorUtils, GenericDataError } from "./../helpers/errors";
+import { FuseErrorUtils, FuseGenericError } from "./../helpers/errors";
 import type {
   DynamoDB,
   PutItemInput,
@@ -141,7 +141,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }
 
   private _fuse_createGenericError(error: string) {
-    return new GenericDataError(error);
+    return new FuseGenericError(error);
   }
 
   private _fuse_withConditionPassed({ item, withCondition }: { item: any; withCondition?: IFuseFieldCondition<T> }) {
@@ -187,6 +187,10 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
 
     if (!dataId) {
       dataId = this._fuse_generateDynamoTableKey();
+    }
+
+    if (!(dataId && typeof dataId === "string")) {
+      throw this._fuse_createGenericError("Invalid dataId generation");
     }
 
     const dataMust = this._fuse_getBaseObject({ dataId });
