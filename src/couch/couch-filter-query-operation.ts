@@ -156,7 +156,6 @@ export class CouchFilterQueryOperation {
             });
             queryConditions.push(_queryConditions);
           }
-          // filterFieldNotExist({ fieldName, termValue }
         } else if (conditionKey === "$notContains") {
           // const _queryConditions = this.operation__filterContains({
           //   fieldName: fieldName,
