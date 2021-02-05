@@ -76,7 +76,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     this._fuse_errorHelper = new FuseErrorUtils();
   }
 
-  protected fuse_tableManager() {
+  fuse_tableManager() {
     if (!this._fuse_tableManager) {
       this._fuse_tableManager = new DynamoManageTable<T>({
         dynamoDb: () => this._fuse_dynamoDbInstance(),
@@ -178,7 +178,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     });
   }
 
-  protected async fuse_createOne({ data }: { data: T }) {
+  async fuse_createOne({ data }: { data: T }) {
     this._fuse_checkValidateStrictRequiredFields(data);
 
     const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
@@ -208,7 +208,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return result;
   }
 
-  protected async fuse_getOneById({
+  async fuse_getOneById({
     dataId,
     withCondition,
   }: {
@@ -247,7 +247,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return item;
   }
 
-  protected async fuse_updateOneDirect({ data }: { data: T }) {
+  async fuse_updateOneDirect({ data }: { data: T }) {
     this._fuse_checkValidateStrictRequiredFields(data);
 
     const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
@@ -276,7 +276,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return result;
   }
 
-  protected async fuse_updateOneById({
+  async fuse_updateOneById({
     dataId,
     data,
     withCondition,
@@ -324,7 +324,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }
 
   /*
-  protected async fuse_getManyByCondition(paramOptions: IFuseQueryParamOptions<T>) {
+  async fuse_getManyByCondition(paramOptions: IFuseQueryParamOptions<T>) {
     paramOptions.pagingParams = undefined;
     const result = await this.fuse_getManyByConditionPaginate(paramOptions);
     if (result?.mainResult?.length) {
@@ -333,7 +333,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return [];
   }
 
-  protected async fuse_getManyByConditionPaginate(paramOptions: IFuseQueryParamOptions<T>) {
+  async fuse_getManyByConditionPaginate(paramOptions: IFuseQueryParamOptions<T>) {
     const { tableFullName, sortKeyFieldName, partitionKeyFieldName } = this._fuse_getLocalVariables();
     //
     if (!paramOptions?.partitionKeyQuery?.equals === undefined) {
@@ -421,7 +421,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
   }
 */
 
-  protected async fuse_getManyByIds({
+  async fuse_getManyByIds({
     dataIds,
     fields,
     withCondition,
@@ -594,7 +594,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     });
   }
 
-  protected async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
+  async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ) {
     paramOption.pagingParams = undefined;
@@ -605,7 +605,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return [];
   }
 
-  protected async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
+  async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ) {
     const { tableFullName, secondaryIndexOptions } = this._fuse_getLocalVariables();
@@ -701,7 +701,7 @@ export default class DynamoDataOperation<T> extends RepoModel<T> implements Repo
     return result;
   }
 
-  protected async fuse_deleteById({
+  async fuse_deleteById({
     dataId,
     withCondition,
   }: {

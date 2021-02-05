@@ -77,7 +77,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     });
   }
 
-  protected fuse_tableManager() {
+  fuse_tableManager() {
     if (!this._fuse_tableManager) {
       this._fuse_tableManager = new CouchManageTable<T>({
         couchDb: () => this._fuse_couchDbInstance(),
@@ -202,7 +202,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return new FuseGenericError(error);
   }
 
-  protected async fuse_createOne({ data }: { data: T }): Promise<T> {
+  async fuse_createOne({ data }: { data: T }): Promise<T> {
     this._fuse_checkValidateStrictRequiredFields(data);
 
     const { partitionKeyFieldName } = this._fuse_getLocalVariables();
@@ -229,7 +229,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return this._fuse_stripNonRequiredOutputData({ dataObj: data });
   }
 
-  protected async fuse_getAll({ size, skip }: { size?: number; skip?: number } = {}): Promise<T[]> {
+  async fuse_getAll({ size, skip }: { size?: number; skip?: number } = {}): Promise<T[]> {
     const data = await this._fuse_couchDbInstance().allDocs<IFullEntity<T>>({
       include_docs: true,
       startkey: this._fuse_featureEntityValue,
@@ -247,7 +247,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return dataList;
   }
 
-  protected async fuse_getOneById({
+  async fuse_getOneById({
     dataId,
     withCondition,
   }: {
@@ -269,7 +269,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return this._fuse_stripNonRequiredOutputData({ dataObj: dataInDb });
   }
 
-  protected async fuse_updateOneById({
+  async fuse_updateOneById({
     dataId,
     data,
     withCondition,
@@ -304,13 +304,13 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return this._fuse_stripNonRequiredOutputData({ dataObj: data });
   }
 
-  protected fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
+  fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
     const dataInput: IFullEntity<T> = data as any;
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId: dataInput.id });
     return this.fuse_updateOneById({ data, dataId: dataInput.id });
   }
 
-  protected async fuse_getManyByIds({
+  async fuse_getManyByIds({
     dataIds,
     fields,
     withCondition,
@@ -357,7 +357,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return dataList;
   }
 
-  protected async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
+  async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<T[]> {
     paramOption.pagingParams = undefined;
@@ -368,7 +368,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     return [];
   }
 
-  protected async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
+  async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<IFusePagingResult<T[]>> {
     const { secondaryIndexOptions } = this._fuse_getLocalVariables();
@@ -456,7 +456,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
     };
   }
 
-  protected async fuse_deleteById({
+  async fuse_deleteById({
     dataId,
     withCondition,
   }: {
