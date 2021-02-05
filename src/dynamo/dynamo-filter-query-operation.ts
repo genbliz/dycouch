@@ -169,7 +169,7 @@ export class DynamoFilterQueryOperation {
     queryObject,
   }: {
     fieldName: string;
-    queryObject: any;
+    queryObject: Record<string, any>;
   }) {
     const queryConditions: IQueryConditions[] = [];
     Object.keys(queryObject).forEach((condKey) => {
@@ -274,18 +274,20 @@ export class DynamoFilterQueryOperation {
               //
               const orQueryObjectOrValue = orQuery[fieldName];
               //
-              if (typeof orQueryObjectOrValue === "object") {
-                const _orQueryCond = this.operation__translateAdvancedQueryOperation({
-                  fieldName,
-                  queryObject: orQueryObjectOrValue,
-                });
-                queryOrConditions = [...queryOrConditions, ..._orQueryCond];
-              } else {
-                const _orQueryConditions = this.operation_translateBasicQueryOperation({
-                  fieldName,
-                  queryObject: orQueryObjectOrValue,
-                });
-                queryOrConditions = [...queryOrConditions, _orQueryConditions];
+              if (orQueryObjectOrValue !== undefined) {
+                if (orQueryObjectOrValue && typeof orQueryObjectOrValue === "object") {
+                  const _orQueryCond = this.operation__translateAdvancedQueryOperation({
+                    fieldName,
+                    queryObject: orQueryObjectOrValue,
+                  });
+                  queryOrConditions = [...queryOrConditions, ..._orQueryCond];
+                } else {
+                  const _orQueryConditions = this.operation_translateBasicQueryOperation({
+                    fieldName,
+                    queryObject: orQueryObjectOrValue,
+                  });
+                  queryOrConditions = [...queryOrConditions, _orQueryConditions];
+                }
               }
             });
           });
@@ -299,18 +301,20 @@ export class DynamoFilterQueryOperation {
               //
               const andQueryObjectOrValue = andQuery[fieldName];
               //
-              if (typeof andQueryObjectOrValue === "object") {
-                const _andQueryCond = this.operation__translateAdvancedQueryOperation({
-                  fieldName,
-                  queryObject: andQueryObjectOrValue,
-                });
-                queryAndConditions = [...queryAndConditions, ..._andQueryCond];
-              } else {
-                const _andQueryConditions = this.operation_translateBasicQueryOperation({
-                  fieldName,
-                  queryObject: andQueryObjectOrValue,
-                });
-                queryAndConditions = [...queryAndConditions, _andQueryConditions];
+              if (andQueryObjectOrValue !== undefined) {
+                if (andQueryObjectOrValue && typeof andQueryObjectOrValue === "object") {
+                  const _andQueryCond = this.operation__translateAdvancedQueryOperation({
+                    fieldName,
+                    queryObject: andQueryObjectOrValue,
+                  });
+                  queryAndConditions = [...queryAndConditions, ..._andQueryCond];
+                } else {
+                  const _andQueryConditions = this.operation_translateBasicQueryOperation({
+                    fieldName,
+                    queryObject: andQueryObjectOrValue,
+                  });
+                  queryAndConditions = [...queryAndConditions, _andQueryConditions];
+                }
               }
             });
           });
@@ -319,8 +323,9 @@ export class DynamoFilterQueryOperation {
         if (fieldName_Or_And) {
           const fieldName2 = fieldName_Or_And;
           const queryObjectOrValue = queryDefs[fieldName2];
-          if (queryObjectOrValue) {
-            if (typeof queryObjectOrValue === "object") {
+
+          if (queryObjectOrValue !== undefined) {
+            if (queryObjectOrValue && typeof queryObjectOrValue === "object") {
               const _queryCond = this.operation__translateAdvancedQueryOperation({
                 fieldName: fieldName2,
                 queryObject: queryObjectOrValue,

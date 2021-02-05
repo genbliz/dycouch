@@ -135,7 +135,7 @@ export default class CouchDataOperation<T> extends RepoModel<T> implements RepoM
 
   private _fuse_getNativePouchId(dataId: string) {
     const { featureEntityValue } = this._fuse_getLocalVariables();
-    return [`${featureEntityValue}:`, featureEntityValue, "#", dataId].join("");
+    return [featureEntityValue, dataId].join(":");
   }
 
   private _fuse_getBaseObject({ dataId }: { dataId: string }) {
