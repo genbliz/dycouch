@@ -1,5 +1,6 @@
+import { FuseInitializerDynamo } from "./../dynamo/dynamo-initializer";
+import { DynamoDataOperation } from "./../dynamo/dynamo-data-operation";
 import type { IFuseIndexDefinition } from "../type/types";
-import { FuseDataOperationDynamo, FuseInitializerDynamo } from "../";
 import Joi from "joi";
 
 interface IBaseRepoOptions<T> {
@@ -8,7 +9,7 @@ interface IBaseRepoOptions<T> {
   secondaryIndexOptions: IFuseIndexDefinition<T>[];
 }
 
-export abstract class BaseRepository<T> extends FuseDataOperationDynamo<T> {
+export abstract class BaseRepository<T> extends DynamoDataOperation<T> {
   constructor({ schemaSubDef, secondaryIndexOptions, featureEntityValue }: IBaseRepoOptions<T>) {
     super({
       dynamoDb: () => new FuseInitializerDynamo({ region: "" }),
