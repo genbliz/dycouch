@@ -37,7 +37,7 @@ function createTenantSchema(schemaMapDef: Joi.SchemaMap) {
 
 type IModelBase = IFuseCoreEntityModel;
 
-export default class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
+export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
   private readonly _fuse_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
   //

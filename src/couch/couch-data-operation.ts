@@ -28,7 +28,7 @@ type IModelBase = IFuseCoreEntityModel;
 
 type IFullEntity<T> = IFuseCoreEntityModel & T;
 
-export default class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
+export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
   private readonly _fuse_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
   //
