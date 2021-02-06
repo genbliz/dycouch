@@ -220,7 +220,9 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     if (!result.ok) {
       throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
     }
-    return this._fuse_stripNonRequiredOutputData({ dataObj: data });
+    return this._fuse_stripNonRequiredOutputData({
+      dataObj: validated.validatedData,
+    });
   }
 
   async fuse_getAll({ size, skip }: { size?: number; skip?: number } = {}): Promise<T[]> {
@@ -295,7 +297,9 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     if (!result.ok) {
       throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
     }
-    return this._fuse_stripNonRequiredOutputData({ dataObj: data });
+    return this._fuse_stripNonRequiredOutputData({
+      dataObj: validated.validatedData,
+    });
   }
 
   fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
