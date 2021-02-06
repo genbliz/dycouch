@@ -1,8 +1,9 @@
 import { LoggingService } from "./../helpers/logging-service";
-import { IFuseIndexDefinition } from "./../type/types";
+import type { IFuseIndexDefinition } from "./../type/types";
+import type { FuseInitializerCouch } from "./couch-initializer";
 
 interface ITableOptions<T> {
-  couchDb: () => PouchDB.Database<Pick<unknown, never>>;
+  couchDb: () => FuseInitializerCouch;
   secondaryIndexOptions: IFuseIndexDefinition<T>[];
   tableFullName: string;
   partitionKeyFieldName: string;
@@ -12,7 +13,7 @@ interface ITableOptions<T> {
 export class CouchManageTable<T> {
   private readonly partitionKeyFieldName: string;
   private readonly sortKeyFieldName: string;
-  private readonly couchDb: () => PouchDB.Database<Pick<unknown, never>>;
+  private readonly couchDb: () => FuseInitializerCouch;
   private readonly tableFullName: string;
   private readonly secondaryIndexOptions: IFuseIndexDefinition<T>[];
 
@@ -41,26 +42,41 @@ export class CouchManageTable<T> {
     return this.couchDb();
   }
 
-  async fuse_createIndex({ indexName, fields }: { indexName: string; fields: string[] }): Promise<string> {
-    const result = await this._fuse_getInstance().createIndex({
-      index: {
+  async fuse_createIndex({ indexName, fields }: { indexName: string; fields: string[] }) {
+    const result = await this._fuse_getInstance()
+      .getDocInstance()
+      .createIndex({
+        index: {
+          fields: fields,
+        },
         name: indexName,
-        fields: fields,
         ddoc: indexName,
         type: "json",
-      },
-    });
+        partitioned: true,
+      });
     LoggingService.log(result);
-    return result?.result;
+    return {
+      id: result.id,
+      name: result.name,
+      result: result.result,
+    };
   }
 
   async fuse_clearAllIndexes() {
     const indexes = await this._fuse_getInstance().getIndexes();
-    for (const { ddoc, name, type } of indexes?.indexes) {
-      if (ddoc && name && type !== "special") {
-        await this._fuse_getInstance().deleteIndex({ ddoc, name });
+    if (indexes?.indexes?.length) {
+      for (const { ddoc, name, type } of indexes.indexes) {
+        if (ddoc && name && type !== "special") {
+          await this._fuse_getInstance().deleteIndex({ ddoc, name });
+        }
       }
+      return {
+        deleted: indexes.indexes,
+      };
     }
+    return {
+      deleted: [],
+    };
   }
 
   fuse_getIndexes() {
@@ -72,13 +88,9 @@ export class CouchManageTable<T> {
     if (this.secondaryIndexOptions?.length) {
       for (const indexOption of this.secondaryIndexOptions) {
         if (indexOption.indexName) {
-          const resultData = await this._fuse_getInstance().createIndex({
-            index: {
-              name: indexOption.indexName,
-              fields: [indexOption.keyFieldName, indexOption.sortFieldName] as any[],
-              ddoc: indexOption.indexName,
-              type: "json",
-            },
+          const resultData = await this.fuse_createIndex({
+            fields: [indexOption.keyFieldName, indexOption.sortFieldName] as any[],
+            indexName: indexOption.indexName,
           });
           LoggingService.log(resultData);
           results.push(resultData.result);

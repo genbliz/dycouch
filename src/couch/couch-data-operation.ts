@@ -7,7 +7,7 @@ import type {
 } from "../type/types";
 import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
-import { FuseInitializerCouch } from "./couch-initializer";
+import type { FuseInitializerCouch } from "./couch-initializer";
 import { coreSchemaDefinition, IFuseCoreEntityModel } from "../core/base-schema";
 import { FuseErrorUtils, FuseGenericError } from "../helpers/errors";
 import { getJoiValidationErrors } from "../helpers/base-joi-helper";
@@ -80,7 +80,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   fuse_tableManager() {
     if (!this._fuse_tableManager) {
       this._fuse_tableManager = new CouchManageTable<T>({
-        couchDb: () => this._fuse_couchDbInstance(),
+        couchDb: () => this._fuse_couchDb(),
         secondaryIndexOptions: this._fuse_secondaryIndexOptions,
         tableFullName: this._fuse_tableFullName,
         partitionKeyFieldName: this._fuse_partitionKeyFieldName,
@@ -95,7 +95,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   }
 
   private _fuse_couchDbInstance() {
-    return this._fuse_couchDb().getInstance(this._fuse_tableFullName);
+    return this._fuse_couchDb().getDocInstance(this._fuse_tableFullName);
   }
 
   private _fuse_getLocalVariables() {
@@ -310,7 +310,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     withCondition,
   }: {
     dataIds: string[];
-    fields?: (keyof T)[] | undefined;
+    fields?: (keyof T)[];
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T[]> {
     //
@@ -433,7 +433,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       paramOption,
     });
 
-    const data = await this._fuse_couchDbInstance().find({
+    const data = await this._fuse_couchDbInstance().partitionedFind(this._fuse_featureEntityValue, {
       selector: { ...queryDefDataOrdered },
       fields: paramOption?.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields as any) : undefined,
       use_index: paramOption.indexName,

@@ -22,7 +22,8 @@ interface IOptions {
 }
 
 export class FuseInitializerCouch {
-  private _databaseInstance!: Nano.DocumentScope<any>;
+  private _databaseInstance!: Nano.ServerScope;
+  private _documentScope!: Nano.DocumentScope<any>;
 
   private readonly couchConfig: IOptions["couchConfig"];
   // private readonly sqliteConfig: IOptions["sqliteConfig"];
@@ -50,11 +51,58 @@ export class FuseInitializerCouch {
     return dbUrlPart.join("");
   }
 
-  getInstance<T>(dbName: string): Nano.DocumentScope<IBaseDef<T>> {
+  async deleteIndex({ ddoc, name }: { ddoc: string; name: string }) {
+    const path = ["_index", ddoc, "json", name].join("/");
+    const result: { ok: boolean } = await this._databaseInstance.request({
+      db: this.couchConfig.databaseName,
+      method: "DELETE",
+      path,
+      content_type: "application/json",
+    });
+    // DELETE /{db}/_index/{designdoc}/json/{name}
+    return result;
+  }
+
+  async getIndexes() {
+    if (this._documentScope) {
+      type IIndexList = {
+        indexes: {
+          ddoc: string;
+          name: string;
+          type: string;
+          def: {
+            fields: {
+              [field: string]: "asc" | "desc";
+            }[];
+          };
+        }[];
+        total_rows: number;
+      };
+      const result: IIndexList = await this._databaseInstance.request({
+        db: this.couchConfig.databaseName,
+        method: "GET",
+        path: "_index",
+        content_type: "application/json",
+      });
+      return result;
+    }
+    //GET /{db}/_index
+    return null;
+  }
+
+  getDocInstance<T>(dbName?: string): Nano.DocumentScope<IBaseDef<T>> {
+    if (!this._documentScope) {
+      const n = this.getInstance();
+      const db = n.db.use<IBaseDef<T>>(this.couchConfig.databaseName);
+      this._documentScope = db;
+    }
+    return this._documentScope;
+  }
+
+  getInstance() {
     if (!this._databaseInstance) {
       const n = Nano(this.getFullDbUrl(this.couchConfig));
-      const db = n.db.use<IBaseDef<T>>(this.couchConfig.databaseName);
-      this._databaseInstance = db;
+      this._databaseInstance = n;
     }
     return this._databaseInstance;
   }

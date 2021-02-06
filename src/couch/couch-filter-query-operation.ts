@@ -1,8 +1,5 @@
 import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 
-export type IConditionOperators = PouchDB.Find.ConditionOperators;
-export type ICombinationOperators = PouchDB.Find.CombinationOperators;
-
 interface IQueryConditionsKeys {
   $lt?: any;
   $gt?: any;
