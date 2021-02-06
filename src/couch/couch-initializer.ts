@@ -6,19 +6,19 @@ type IBaseDef<T> = Omit<T & IFuseCoreEntityModel, "">;
 interface IOptions {
   //http://admin:mypassword@localhost:5984
   couchConfig: {
-    /** eg: ```127.0.0.1, localhost, example.com```  */
+    /**
+     * eg: ```127.0.0.1, localhost, example.com```
+     */
     host: string;
     password?: string;
     username?: string;
     databaseName: string;
     port?: number;
-    /** default: ```http``` */
+    /**
+     * default: ```http```
+     */
     protocol?: "http" | "https";
   };
-  // sqliteConfig?: {
-  //   dbDirectory?: string;
-  //   canSplitDb?: boolean;
-  // };
 }
 
 export class FuseInitializerCouch {
@@ -53,7 +53,7 @@ export class FuseInitializerCouch {
 
   async deleteIndex({ ddoc, name }: { ddoc: string; name: string }) {
     const path = ["_index", ddoc, "json", name].join("/");
-    const result: { ok: boolean } = await this._databaseInstance.request({
+    const result: { ok: boolean } = await this._databaseInstance.relax({
       db: this.couchConfig.databaseName,
       method: "DELETE",
       path,
@@ -64,39 +64,42 @@ export class FuseInitializerCouch {
   }
 
   async getIndexes() {
-    if (this._documentScope) {
-      type IIndexList = {
-        indexes: {
-          ddoc: string;
-          name: string;
-          type: string;
-          def: {
-            fields: {
-              [field: string]: "asc" | "desc";
-            }[];
-          };
-        }[];
-        total_rows: number;
-      };
-      const result: IIndexList = await this._databaseInstance.request({
-        db: this.couchConfig.databaseName,
-        method: "GET",
-        path: "_index",
-        content_type: "application/json",
-      });
-      return result;
-    }
+    type IIndexList = {
+      indexes: {
+        ddoc: string;
+        name: string;
+        type: string;
+        def: {
+          fields: {
+            [field: string]: "asc" | "desc";
+          }[];
+        };
+      }[];
+      total_rows: number;
+    };
+    const result: IIndexList = await this.getInstance().request({
+      db: this.couchConfig.databaseName,
+      method: "GET",
+      path: "_index",
+      content_type: "application/json",
+    });
+    console.log({ indexes: result });
+    return result;
     //GET /{db}/_index
-    return null;
   }
 
-  getDocInstance<T>(dbName?: string): Nano.DocumentScope<IBaseDef<T>> {
+  getDocInstance<T>(): Nano.DocumentScope<IBaseDef<T>> {
     if (!this._documentScope) {
       const n = this.getInstance();
       const db = n.db.use<IBaseDef<T>>(this.couchConfig.databaseName);
       this._documentScope = db;
     }
     return this._documentScope;
+  }
+
+  async createDatabase() {
+    const n = this.getInstance();
+    return await n.db.create(this.couchConfig.databaseName, { partitioned: true });
   }
 
   getInstance() {

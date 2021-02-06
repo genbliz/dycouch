@@ -95,7 +95,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   }
 
   private _fuse_couchDbInstance() {
-    return this._fuse_couchDb().getDocInstance(this._fuse_tableFullName);
+    return this._fuse_couchDb().getDocInstance();
   }
 
   private _fuse_getLocalVariables() {

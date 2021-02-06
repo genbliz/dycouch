@@ -83,6 +83,10 @@ export class CouchManageTable<T> {
     return this._fuse_getInstance().getIndexes();
   }
 
+  fuse_createDatabse() {
+    return this._fuse_getInstance().createDatabase();
+  }
+
   async fuse_createDefinedIndexes(): Promise<string[]> {
     const results: string[] = [];
     if (this.secondaryIndexOptions?.length) {
