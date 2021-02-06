@@ -158,6 +158,15 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     return Array.from(new Set([...strArray]));
   }
 
+  private _fuse_marshallJsonData(value: Record<string, any>) {
+    const marshalled = marshall(value, {
+      convertClassInstanceToMap: true,
+      convertEmptyValues: true,
+      removeUndefinedValues: true,
+    });
+    return marshalled;
+  }
+
   private async _fuse_allHelpValidateMarshallAndGetValue(data: any) {
     const { error, value } = this._fuse_schema.validate(data, {
       stripUnknown: true,
@@ -167,11 +176,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       const msg = getJoiValidationErrors(error) ?? "Validation error occured";
       throw this._fuse_errorHelper.fuse_helper_createFriendlyError(msg);
     }
-    const marshalledData = marshall(value, {
-      convertClassInstanceToMap: true,
-      convertEmptyValues: true,
-      removeUndefinedValues: true,
-    });
+    const marshalledData = this._fuse_marshallJsonData(value);
     return await Promise.resolve({
       validatedData: value,
       marshalled: marshalledData,
@@ -205,6 +210,31 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
 
     await this._fuse_dynamoDbInstance().putItem(params);
     const result: T = validatedData;
+    return result;
+  }
+
+  async fuse_replicateOneToOnline<Tn = any>({
+    tableFullName,
+    replicateData,
+  }: {
+    tableFullName: string;
+    replicateData: IFuseCoreEntityModel & { [name: string]: any };
+  }) {
+    this._fuse_errorHelper.fuse_helper_validateRequiredString({
+      replicate_id: replicateData.id,
+      replicate_featureEntity: replicateData.featureEntity,
+      tableFullName,
+    });
+
+    const marshalled = this._fuse_marshallJsonData(replicateData);
+
+    const params: PutItemInput = {
+      TableName: tableFullName,
+      Item: marshalled,
+    };
+
+    await this._fuse_dynamoDbInstance().putItem(params);
+    const result: Tn = replicateData as any;
     return result;
   }
 

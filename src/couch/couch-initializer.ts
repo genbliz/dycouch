@@ -1,123 +1,61 @@
-import PouchDB from "pouchdb";
-import os from "os";
-import path from "path";
-import fs from "fs";
 import type { IFuseCoreEntityModel } from "../core/base-schema";
+import Nano from "nano";
 
-PouchDB.plugin(require("pouchdb-find"));
-PouchDB.plugin(require("pouchdb-adapter-node-websql"));
-PouchDB.plugin(require("pouchdb-adapter-http"));
-// PouchDB.plugin(require("pouchdb-debug"));
-
-type IBaseDef<T> = Omit<T, "">;
+type IBaseDef<T> = Omit<T & IFuseCoreEntityModel, "">;
 
 interface IOptions {
-  couchConfig?: {
-    dbUrl: string;
+  //http://admin:mypassword@localhost:5984
+  couchConfig: {
+    /** eg: ```127.0.0.1, localhost, example.com```  */
+    host: string;
     password?: string;
     username?: string;
+    databaseName: string;
+    port?: number;
+    /** default: ```http``` */
+    protocol?: "http" | "https";
   };
-  sqliteConfig?: {
-    dbDirectory?: string;
-    canSplitDb?: boolean;
-  };
+  // sqliteConfig?: {
+  //   dbDirectory?: string;
+  //   canSplitDb?: boolean;
+  // };
 }
 
 export class FuseInitializerCouch {
-  private _databaseInstance!: PouchDB.Database<any>;
+  private _databaseInstance!: Nano.DocumentScope<any>;
 
   private readonly couchConfig: IOptions["couchConfig"];
-  private readonly sqliteConfig: IOptions["sqliteConfig"];
-  readonly sqliteSplitDb: boolean;
+  // private readonly sqliteConfig: IOptions["sqliteConfig"];
+  // readonly sqliteSplitDb: boolean;
 
-  constructor({ couchConfig, sqliteConfig }: IOptions = {}) {
+  constructor({ couchConfig }: IOptions) {
     this.couchConfig = couchConfig;
-    this.sqliteConfig = sqliteConfig;
-    this.sqliteSplitDb = sqliteConfig?.canSplitDb === true;
   }
 
-  private createWebSqlInstance({ dbPath }: { dbPath: string }) {
-    return new PouchDB<IBaseDef<IFuseCoreEntityModel>>(dbPath, {
-      adapter: "websql",
-    });
-  }
+  private getFullDbUrl(config: IOptions["couchConfig"]) {
+    //http://admin:mypassword@localhost:5984
+    const protocol = config?.protocol || "http";
+    const dbUrlPart: string[] = [`${protocol}://`];
 
-  private createHttpInstance({ dbUrl, password, username }: { dbUrl: string; password?: string; username?: string }) {
-    if (username && password) {
-      return new PouchDB<IBaseDef<IFuseCoreEntityModel>>(dbUrl, {
-        auth: {
-          password,
-          username,
-        },
-      });
+    if (config?.username && config.password) {
+      dbUrlPart.push(config.username);
+      dbUrlPart.push(`:${config.password}@`);
     }
-    return new PouchDB<IBaseDef<IFuseCoreEntityModel>>(dbUrl);
+
+    dbUrlPart.push(config.host);
+
+    if (config?.port) {
+      dbUrlPart.push(`:${config.port}`);
+    }
+    return dbUrlPart.join("");
   }
 
-  getInstance<T>(sqliteDbName: string): PouchDB.Database<IBaseDef<T>> {
+  getInstance<T>(dbName: string): Nano.DocumentScope<IBaseDef<T>> {
     if (!this._databaseInstance) {
-      if (this.couchConfig?.dbUrl) {
-        this._databaseInstance = this.createHttpInstance({
-          dbUrl: this.couchConfig.dbUrl /* "http://localhost:5984/my-database" */,
-          password: this.couchConfig.password,
-          username: this.couchConfig.username,
-        });
-      } else {
-        const baseSqliteDir = this.sqliteConfig?.dbDirectory || path.resolve(`${os.homedir()}/pouch_db_out`);
-
-        if (!fs.existsSync(baseSqliteDir)) {
-          fs.mkdirSync(baseSqliteDir, { recursive: true });
-        }
-
-        if (sqliteDbName) {
-          this._databaseInstance = this.createWebSqlInstance({
-            dbPath: path.resolve(`${baseSqliteDir}/${sqliteDbName}.db`),
-          });
-        } else {
-          this._databaseInstance = this.createWebSqlInstance({
-            dbPath: path.resolve(`${baseSqliteDir}/pouch_db_5bc365dc993c682b921d21744cf9b72b.db`),
-          });
-        }
-      }
-
-      // if (envConfig.NODE_ENV === "development") {
-      //   PouchDB.debug.enable("*");
-      //   this._databaseInstance.info().then((info) => {
-      //     console.log(info);
-      //   });
-      // } else {
-      //   PouchDB.debug.disable();
-      // }
-
-      // if (envConfig.APP_REPLICATION_DATABASE_URL && envConfig.REPLICATION_ENABLED) {
-      //   const remoteDB = this.createHttpInstance({
-      //     dbUrl: envConfig.APP_REPLICATION_DATABASE_URL,
-      //     password: "ss@yeur",
-      //     username: "me-user",
-      //   });
-      //   this._databaseInstance.replicate
-      //     .to(remoteDB)
-      //     .on("complete", () => {
-      //       console.log("Romote DB Replication Successful");
-      //     })
-      //     .on("error", (err) => {
-      //       console.log("Romote DB Replication Error", err);
-      //     });
-      // }
+      const n = Nano(this.getFullDbUrl(this.couchConfig));
+      const db = n.db.use<IBaseDef<T>>(this.couchConfig.databaseName);
+      this._databaseInstance = db;
     }
     return this._databaseInstance;
   }
-
-  // compactDb() {
-  //   this._databaseInstance
-  //     .compact({ interval: undefined })
-  //     .then((info) => {
-  //       // compaction complete
-  //       console.log("compaction complete");
-  //     })
-  //     .catch((err) => {
-  //       // handle errors
-  //       console.log("compaction erros", err);
-  //     });
-  // }
 }

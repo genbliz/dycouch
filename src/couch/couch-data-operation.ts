@@ -95,11 +95,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   }
 
   private _fuse_couchDbInstance() {
-    const inst = this._fuse_couchDb();
-    if (inst.sqliteSplitDb) {
-      return inst.getInstance(this._fuse_featureEntityValue);
-    }
-    return inst.getInstance(this._fuse_tableFullName);
+    return this._fuse_couchDb().getInstance(this._fuse_tableFullName);
   }
 
   private _fuse_getLocalVariables() {
@@ -193,9 +189,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       throw this._fuse_errorHelper.fuse_helper_createFriendlyError(msg);
     }
 
-    return await Promise.resolve({
-      validatedData: value,
-    });
+    return await Promise.resolve({ validatedData: value });
   }
 
   private _fuse_createGenericError(error: string) {
@@ -222,7 +216,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const validated = await this._fuse_allHelpValidateGetValue(fullData);
 
-    const result = await this._fuse_couchDbInstance().put(validated.validatedData);
+    const result = await this._fuse_couchDbInstance().insert(validated.validatedData);
     if (!result.ok) {
       throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
     }
@@ -230,7 +224,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   }
 
   async fuse_getAll({ size, skip }: { size?: number; skip?: number } = {}): Promise<T[]> {
-    const data = await this._fuse_couchDbInstance().allDocs<IFullEntity<T>>({
+    const data = await this._fuse_couchDbInstance().list({
       include_docs: true,
       startkey: this._fuse_featureEntityValue,
       endkey: `${this._fuse_featureEntityValue}\ufff0`,
@@ -258,7 +252,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const nativeId = this._fuse_getNativePouchId(dataId);
 
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+    const dataInDb = await this._fuse_couchDbInstance().get(nativeId);
     if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
       return null;
     }
@@ -282,7 +276,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const nativeId = this._fuse_getNativePouchId(dataId);
 
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+    const dataInDb = await this._fuse_couchDbInstance().get(nativeId);
     if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue && dataInDb._rev)) {
       throw this._fuse_createGenericError("Record does not exists");
     }
@@ -294,7 +288,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const validated = await this._fuse_allHelpValidateGetValue(_data);
 
-    const result = await this._fuse_couchDbInstance().put<T>({
+    const result = await this._fuse_couchDbInstance().insert({
       ...validated.validatedData,
       _rev: dataInDb._rev,
     });
@@ -323,7 +317,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const uniqueIds = this._fuse_removeDuplicateString(dataIds);
     const fullUniqueIds = uniqueIds.map((id) => this._fuse_getNativePouchId(id));
 
-    const data = await this._fuse_couchDbInstance().allDocs<IFullEntity<T>>({
+    const data = await this._fuse_couchDbInstance().list({
       keys: fullUniqueIds,
       include_docs: true,
     });
@@ -464,7 +458,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T> {
     const nativeId = this._fuse_getNativePouchId(dataId);
-    const dataInDb = await this._fuse_couchDbInstance().get<IFullEntity<T>>(nativeId);
+    const dataInDb = await this._fuse_couchDbInstance().get(nativeId);
 
     if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
       throw this._fuse_createGenericError("Record does not exists");
@@ -473,7 +467,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     if (!passed) {
       throw this._fuse_createGenericError("Record with conditions does not exists for deletion");
     }
-    const result = await this._fuse_couchDbInstance().remove(dataInDb);
+    const result = await this._fuse_couchDbInstance().destroy(dataInDb._id, dataInDb._rev);
     if (!result.ok) {
       throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
     }
