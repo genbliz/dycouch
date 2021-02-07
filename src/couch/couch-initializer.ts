@@ -97,15 +97,23 @@ export class FuseInitializerCouch {
     return this._documentScope;
   }
 
+  async checkDatabaseExists(databaseName?: string) {
+    const checkDbExistResult = await this.getInstance().request({
+      db: databaseName || this.couchConfig.databaseName,
+      method: "HEAD",
+      content_type: "application/json",
+    });
+    console.log(JSON.stringify({ checkDbExistResult }, null, 2));
+    return checkDbExistResult;
+  }
+
   async createDatabase() {
-    const n = this.getInstance();
-    return await n.db.create(this.couchConfig.databaseName, { partitioned: true });
+    return await this.getInstance().db.create(this.couchConfig.databaseName, { partitioned: true });
   }
 
   getInstance() {
     if (!this._databaseInstance) {
-      const n = Nano(this.getFullDbUrl(this.couchConfig));
-      this._databaseInstance = n;
+      this._databaseInstance = Nano(this.getFullDbUrl(this.couchConfig));
     }
     return this._databaseInstance;
   }
