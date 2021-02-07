@@ -1,3 +1,4 @@
+import { FuseUtil } from "./../helpers/fuse-utils";
 import { RepoModel } from "../model/repo-model";
 import type { IFuseIndexDefinition, IFuseFieldCondition, IFuseQueryIndexOptions } from "../type/types";
 import { FuseErrorUtils, FuseGenericError } from "./../helpers/errors";
@@ -12,7 +13,6 @@ import type {
   GetItemCommandInput,
 } from "@aws-sdk/client-dynamodb";
 import Joi from "joi";
-import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { getJoiValidationErrors } from "../helpers/base-joi-helper";
 import { coreSchemaDefinition, IFuseCoreEntityModel } from "../core/base-schema";
 import { DynamoManageTable } from "./dynamo-manage-table";
@@ -32,7 +32,10 @@ interface IDynamoOptions<T> {
 }
 
 function createTenantSchema(schemaMapDef: Joi.SchemaMap) {
-  return Joi.object().keys({ ...schemaMapDef, ...coreSchemaDefinition });
+  return Joi.object().keys({
+    ...schemaMapDef,
+    ...coreSchemaDefinition,
+  });
 }
 
 type IModelBase = IFuseCoreEntityModel;
@@ -158,15 +161,6 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     return Array.from(new Set([...strArray]));
   }
 
-  private _fuse_marshallJsonData(value: Record<string, any>) {
-    const marshalled = marshall(value, {
-      convertClassInstanceToMap: true,
-      convertEmptyValues: true,
-      removeUndefinedValues: true,
-    });
-    return marshalled;
-  }
-
   private async _fuse_allHelpValidateMarshallAndGetValue(data: any) {
     const { error, value } = this._fuse_schema.validate(data, {
       stripUnknown: true,
@@ -176,7 +170,8 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       const msg = getJoiValidationErrors(error) ?? "Validation error occured";
       throw this._fuse_errorHelper.fuse_helper_createFriendlyError(msg);
     }
-    const marshalledData = this._fuse_marshallJsonData(value);
+
+    const marshalledData = FuseUtil.fuse_marshallFromJson(value);
     return await Promise.resolve({
       validatedData: value,
       marshalled: marshalledData,
@@ -213,6 +208,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     return result;
   }
 
+  /*s
   async fuse_replicateOneToOnline<Tn = any>({
     tableFullName,
     replicateData,
@@ -226,7 +222,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       tableFullName,
     });
 
-    const marshalled = this._fuse_marshallJsonData(replicateData);
+    const marshalled = FuseUtil.fuse_marshallFromJson(replicateData);
 
     const params: PutItemInput = {
       TableName: tableFullName,
@@ -236,7 +232,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     await this._fuse_dynamoDbInstance().putItem(params);
     const result: Tn = replicateData as any;
     return result;
-  }
+  }*/
 
   async fuse_getOneById({
     dataId,
@@ -597,7 +593,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
           if (data?.Responses) {
             const itemListRaw = data.Responses[tableFullName];
             const itemList = itemListRaw.map((item) => {
-              return unmarshall(item);
+              return FuseUtil.fuse_unmarshallToJson(item);
             });
             returnedItems = [...returnedItems, ...itemList];
           }

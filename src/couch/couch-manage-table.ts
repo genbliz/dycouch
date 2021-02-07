@@ -65,17 +65,22 @@ export class CouchManageTable<T> {
   async fuse_clearAllIndexes() {
     const indexes = await this._fuse_getInstance().getIndexes();
     if (indexes?.indexes?.length) {
-      for (const { ddoc, name, type } of indexes.indexes) {
-        if (ddoc && name && type !== "special") {
-          await this._fuse_getInstance().deleteIndex({ ddoc, name });
+      const deletedIndexes: any[] = [];
+      for (const index of indexes.indexes) {
+        if (index?.type !== "special") {
+          deletedIndexes.push(index);
+          await this._fuse_getInstance().deleteIndex({
+            ddoc: index.ddoc,
+            name: index.name,
+          });
         }
       }
       return {
-        deleted: indexes.indexes,
+        deletedIndexes,
       };
     }
     return {
-      deleted: [],
+      deletedIndexes: [],
     };
   }
 
