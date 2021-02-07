@@ -387,8 +387,8 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       throw this._fuse_createGenericError("Secondary index not named/defined");
     }
 
-    const partitionKeyFieldName = secondaryIndex.keyFieldName as string;
-    const sortKeyFieldName = secondaryIndex.sortFieldName as string;
+    const partitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
+    const sortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {

@@ -307,7 +307,13 @@ export class DynamoManageTable<T> {
     const attributeDefinitionsNameList: string[] = [];
 
     secondaryIndexOptions.forEach((sIndex) => {
-      const { indexName, keyFieldName, sortFieldName, dataType, projectionFieldsInclude } = sIndex;
+      const {
+        indexName,
+        partitionKeyFieldName: keyFieldName,
+        sortKeyFieldName: sortFieldName,
+        dataType,
+        projectionFieldsInclude,
+      } = sIndex;
       //
       const _keyFieldName = keyFieldName as string;
       const _sortFieldName = sortFieldName as string;

@@ -98,7 +98,7 @@ export class CouchManageTable<T> {
       for (const indexOption of this.secondaryIndexOptions) {
         if (indexOption.indexName) {
           const resultData = await this.fuse_createIndex({
-            fields: [indexOption.keyFieldName, indexOption.sortFieldName] as any[],
+            fields: [indexOption.partitionKeyFieldName, indexOption.sortKeyFieldName] as any[],
             indexName: indexOption.indexName,
           });
           LoggingService.log(resultData);

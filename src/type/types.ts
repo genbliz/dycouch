@@ -76,8 +76,8 @@ export interface IFuseQueryIndexOptions<T, TSortKeyField = string> {
 
 export interface IFuseIndexDefinition<T> {
   indexName: string;
-  keyFieldName: keyof T;
-  sortFieldName: keyof T;
+  partitionKeyFieldName: keyof T;
+  sortKeyFieldName: keyof T;
   dataType: "N" | "S";
   projectionFieldsInclude?: (keyof T)[];
 }

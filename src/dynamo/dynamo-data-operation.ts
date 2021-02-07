@@ -208,32 +208,6 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     return result;
   }
 
-  /*s
-  async fuse_replicateOneToOnline<Tn = any>({
-    tableFullName,
-    replicateData,
-  }: {
-    tableFullName: string;
-    replicateData: IFuseCoreEntityModel & { [name: string]: any };
-  }) {
-    this._fuse_errorHelper.fuse_helper_validateRequiredString({
-      replicate_id: replicateData.id,
-      replicate_featureEntity: replicateData.featureEntity,
-      tableFullName,
-    });
-
-    const marshalled = FuseUtil.fuse_marshallFromJson(replicateData);
-
-    const params: PutItemInput = {
-      TableName: tableFullName,
-      Item: marshalled,
-    };
-
-    await this._fuse_dynamoDbInstance().putItem(params);
-    const result: Tn = replicateData as any;
-    return result;
-  }*/
-
   async fuse_getOneById({
     dataId,
     withCondition,
@@ -651,8 +625,8 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       throw this._fuse_createGenericError("Secondary index not named/defined");
     }
 
-    const partitionKeyFieldName = secondaryIndex.keyFieldName as string;
-    const sortKeyFieldName = secondaryIndex.sortFieldName as string;
+    const partitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
+    const sortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
