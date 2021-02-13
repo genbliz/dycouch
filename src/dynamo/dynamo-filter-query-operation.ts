@@ -2,7 +2,7 @@ import { LoggingService } from "../helpers/logging-service";
 import { UtilService } from "../helpers/util-service";
 import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 
-type FieldPartial<T> = { [P in keyof T]-?: any };
+type FieldPartial<T> = { [P in keyof T]-?: string };
 const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
   $eq: "=",
   $ne: "<>",
@@ -171,53 +171,52 @@ export class DynamoFilterQueryOperation {
     queryObject: Record<string, any>;
   }) {
     const queryConditions: IQueryConditions[] = [];
-    Object.entries(queryObject).forEach(([condKey, conditionObjValue]) => {
+    Object.entries(queryObject).forEach(([condKey, conditionValue]) => {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
-      if (conditionObjValue !== undefined) {
+      if (conditionValue !== undefined) {
         if (conditionKey === "$between") {
-          if (Array.isArray(conditionObjValue)) {
+          if (Array.isArray(conditionValue)) {
             const _queryConditions = this.operation__filterBetween({
               fieldName: fieldName,
-              from: conditionObjValue[0],
-              to: conditionObjValue[1],
+              from: conditionValue[0],
+              to: conditionValue[1],
             });
             queryConditions.push(_queryConditions);
           }
         } else if (conditionKey === "$beginsWith") {
           const _queryConditions = this.operation__filterBeginsWith({
             fieldName: fieldName,
-            term: conditionObjValue,
+            term: conditionValue,
           });
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$contains") {
           const _queryConditions = this.operation__filterContains({
             fieldName: fieldName,
-            term: conditionObjValue,
+            term: conditionValue,
           });
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$in") {
-          if (Array.isArray(conditionObjValue)) {
+          if (Array.isArray(conditionValue)) {
             const _queryConditions = this.operation__filterIn({
               fieldName: fieldName,
-              attrValues: conditionObjValue,
+              attrValues: conditionValue,
             });
             queryConditions.push(_queryConditions);
           }
-          // filterFieldNotExist({ fieldName, termValue }
         } else if (conditionKey === "$notContains") {
           const _queryConditions = this.operation__filterContains({
             fieldName: fieldName,
-            term: conditionObjValue,
+            term: conditionValue,
           });
           _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$exists") {
-          if (conditionObjValue === "true" || conditionObjValue === true) {
+          if (conditionValue === "true" || conditionValue === true) {
             const _queryConditions = this.operation__filterFieldExist({
               fieldName: fieldName,
             });
             queryConditions.push(_queryConditions);
-          } else if (conditionObjValue === "false" || conditionObjValue === false) {
+          } else if (conditionValue === "false" || conditionValue === false) {
             const _queryConditions = this.operation__filterFieldNotExist({
               fieldName: fieldName,
             });
@@ -229,7 +228,7 @@ export class DynamoFilterQueryOperation {
             if (conditionExpr) {
               const _queryConditions = this.fuse__helperFilterBasic({
                 fieldName: fieldName,
-                val: conditionObjValue,
+                val: conditionValue,
                 conditionExpr: conditionExpr,
               });
               queryConditions.push(_queryConditions);
