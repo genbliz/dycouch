@@ -5,13 +5,12 @@ import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/ty
 type FieldPartial<T> = { [P in keyof T]-?: any };
 const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
   $eq: "=",
-  $notEq: "<>",
+  $ne: "<>",
   $lt: "<",
   $lte: "<=",
   $gt: ">",
   $gte: ">=",
   $exists: "",
-  $notExists: "",
   $in: "",
   $between: "",
   $contains: "",
@@ -172,36 +171,35 @@ export class DynamoFilterQueryOperation {
     queryObject: Record<string, any>;
   }) {
     const queryConditions: IQueryConditions[] = [];
-    Object.keys(queryObject).forEach((condKey) => {
+    Object.entries(queryObject).forEach(([condKey, conditionObjValue]) => {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
-      const _conditionObjValue = queryObject[conditionKey];
-      if (_conditionObjValue !== undefined) {
+      if (conditionObjValue !== undefined) {
         if (conditionKey === "$between") {
-          if (Array.isArray(_conditionObjValue)) {
+          if (Array.isArray(conditionObjValue)) {
             const _queryConditions = this.operation__filterBetween({
               fieldName: fieldName,
-              from: _conditionObjValue[0],
-              to: _conditionObjValue[1],
+              from: conditionObjValue[0],
+              to: conditionObjValue[1],
             });
             queryConditions.push(_queryConditions);
           }
         } else if (conditionKey === "$beginsWith") {
           const _queryConditions = this.operation__filterBeginsWith({
             fieldName: fieldName,
-            term: _conditionObjValue,
+            term: conditionObjValue,
           });
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$contains") {
           const _queryConditions = this.operation__filterContains({
             fieldName: fieldName,
-            term: _conditionObjValue,
+            term: conditionObjValue,
           });
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$in") {
-          if (Array.isArray(_conditionObjValue)) {
+          if (Array.isArray(conditionObjValue)) {
             const _queryConditions = this.operation__filterIn({
               fieldName: fieldName,
-              attrValues: _conditionObjValue,
+              attrValues: conditionObjValue,
             });
             queryConditions.push(_queryConditions);
           }
@@ -209,27 +207,29 @@ export class DynamoFilterQueryOperation {
         } else if (conditionKey === "$notContains") {
           const _queryConditions = this.operation__filterContains({
             fieldName: fieldName,
-            term: _conditionObjValue,
+            term: conditionObjValue,
           });
           _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$exists") {
-          const _queryConditions = this.operation__filterFieldExist({
-            fieldName: fieldName,
-          });
-          queryConditions.push(_queryConditions);
-        } else if (conditionKey === "$notExists") {
-          const _queryConditions = this.operation__filterFieldNotExist({
-            fieldName: fieldName,
-          });
-          queryConditions.push(_queryConditions);
+          if (conditionObjValue === "true" || conditionObjValue === true) {
+            const _queryConditions = this.operation__filterFieldExist({
+              fieldName: fieldName,
+            });
+            queryConditions.push(_queryConditions);
+          } else if (conditionObjValue === "false" || conditionObjValue === false) {
+            const _queryConditions = this.operation__filterFieldNotExist({
+              fieldName: fieldName,
+            });
+            queryConditions.push(_queryConditions);
+          }
         } else {
           if (hasQueryConditionKey(conditionKey)) {
             const conditionExpr = conditionKeyMap[conditionKey];
             if (conditionExpr) {
               const _queryConditions = this.fuse__helperFilterBasic({
                 fieldName: fieldName,
-                val: _conditionObjValue,
+                val: conditionObjValue,
                 conditionExpr: conditionExpr,
               });
               queryConditions.push(_queryConditions);
