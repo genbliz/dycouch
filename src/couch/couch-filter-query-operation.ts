@@ -1,4 +1,5 @@
 import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
+// https://docs.couchdb.org/en/latest/api/database/find.html
 
 interface IQueryConditionsKeys {
   $lt?: any;
