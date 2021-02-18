@@ -2,6 +2,8 @@ import { LoggingService } from "../helpers/logging-service";
 import { UtilService } from "../helpers/util-service";
 import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 
+// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
+
 type FieldPartial<T> = { [P in keyof T]-?: string };
 const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
   $eq: "=",
@@ -12,6 +14,7 @@ const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
   $gte: ">=",
   $exists: "",
   $in: "",
+  $nin: "",
   $between: "",
   $contains: "",
   $notContains: "",
@@ -201,6 +204,15 @@ export class DynamoFilterQueryOperation {
               fieldName: fieldName,
               attrValues: conditionValue,
             });
+            queryConditions.push(_queryConditions);
+          }
+        } else if (conditionKey === "$nin") {
+          if (Array.isArray(conditionValue)) {
+            const _queryConditions = this.operation__filterIn({
+              fieldName: fieldName,
+              attrValues: conditionValue,
+            });
+            _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
             queryConditions.push(_queryConditions);
           }
         } else if (conditionKey === "$notContains") {

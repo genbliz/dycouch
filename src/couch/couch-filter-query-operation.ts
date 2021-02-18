@@ -23,6 +23,7 @@ const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
   $gte: "$gte",
   $exists: "",
   $in: "",
+  $nin: "",
   $between: "",
   $contains: "",
   $notContains: "",
@@ -76,6 +77,19 @@ export class CouchFilterQueryOperation {
   private operation__filterIn({ fieldName, attrValues }: { fieldName: string; attrValues: any[] }): IQueryConditions {
     const result = {
       [fieldName]: { $in: attrValues },
+    } as IQueryConditions;
+    return result;
+  }
+
+  private operation__filterNotIn({
+    fieldName,
+    attrValues,
+  }: {
+    fieldName: string;
+    attrValues: any[];
+  }): IQueryConditions {
+    const result = {
+      [fieldName]: { $nin: attrValues },
     } as IQueryConditions;
     return result;
   }
@@ -146,6 +160,14 @@ export class CouchFilterQueryOperation {
         } else if (conditionKey === "$in") {
           if (Array.isArray(conditionValue)) {
             const _queryConditions = this.operation__filterIn({
+              fieldName: fieldName,
+              attrValues: conditionValue,
+            });
+            queryConditions.push(_queryConditions);
+          }
+        } else if (conditionKey === "$nin") {
+          if (Array.isArray(conditionValue)) {
+            const _queryConditions = this.operation__filterNotIn({
               fieldName: fieldName,
               attrValues: conditionValue,
             });

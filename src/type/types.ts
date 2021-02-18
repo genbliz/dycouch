@@ -21,6 +21,7 @@ export type IFuseKeyConditionParams<T = any> = {
 
 export type IFuseQueryConditionParams<T = any> = IFuseKeyConditionParams<T> & {
   $in?: TypeFallBackArray<T>;
+  $nin?: TypeFallBackArray<T>;
   $contains?: string;
   $notContains?: string;
   $ne?: TypeFallBack<T>;
