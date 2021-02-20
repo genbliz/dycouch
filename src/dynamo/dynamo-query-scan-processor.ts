@@ -1,3 +1,4 @@
+import { marshall } from "@aws-sdk/util-dynamodb";
 import type { IFusePagingResult } from "../type/types";
 import { LoggingService } from "../helpers/logging-service";
 import type { DynamoDB, QueryInput, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
@@ -21,6 +22,13 @@ export class DynamoQueryScanProcessor {
     orderDesc?: boolean;
     hashKeyAndSortKey: [string, string];
   }) {
+    if (params?.ExpressionAttributeValues) {
+      const marshalled = marshall(params.ExpressionAttributeValues, {
+        convertEmptyValues: false,
+        removeUndefinedValues: true,
+      });
+      params.ExpressionAttributeValues = marshalled;
+    }
     return await this.__helperDynamoQueryScanProcessor<T>({
       dynamoDb,
       operation: "query",
