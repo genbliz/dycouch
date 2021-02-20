@@ -1,43 +1,61 @@
-import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
+import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 // https://docs.couchdb.org/en/latest/api/database/find.html
 
-interface IQueryConditionsKeys {
+interface ISelectedQueryConditionsKeys {
   $lt?: any;
   $gt?: any;
   $lte?: any;
   $gte?: any;
   $eq?: any;
   $ne?: any;
+  $not?: any;
   $exists?: boolean;
   $in?: any[];
   $nin?: any[];
   $regex?: string;
 }
 
-type FieldPartial<T> = { [P in keyof T]-?: any };
-const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
+type FieldPartial<T> = { [P in keyof T]-?: string };
+
+const keyConditionMap: FieldPartial<IFuseKeyConditionParams> = {
   $eq: "$eq",
-  $ne: "$ne",
   $lt: "$lt",
   $lte: "$lte",
   $gt: "$gt",
   $gte: "$gte",
-  $exists: "",
-  $in: "",
-  $nin: "",
   $between: "",
-  $contains: "",
-  $notContains: "",
   $beginsWith: "",
 };
 
-type FieldPartialQuery<T> = { [P in keyof T]-?: T[P] };
-type IQueryConditions = {
-  [fieldName: string]: FieldPartialQuery<IQueryConditionsKeys>;
+const conditionMapPre: FieldPartial<Omit<IFuseQueryConditionParams, keyof IFuseKeyConditionParams>> = {
+  $ne: "$ne",
+  $exists: "",
+  $in: "",
+  $nin: "",
+  $not: "",
+  $contains: "",
+  $notContains: "",
 };
 
-function hasQueryConditionKey(key: string) {
-  return Object.keys(conditionKeyMap).includes(key);
+const conditionMap = { ...keyConditionMap, ...conditionMapPre };
+
+type FieldPartialQuery<T> = { [P in keyof T]-?: T[P] };
+type IQueryConditions = {
+  [fieldName: string]: FieldPartialQuery<ISelectedQueryConditionsKeys>;
+};
+
+function hasQueryKeyCondition(key: string) {
+  return Object.keys(keyConditionMap).includes(key);
+}
+
+function getQueryConditionExpression(key: string): string | null {
+  if (key && Object.keys(conditionMap).includes(key)) {
+    const conditionExpr = conditionMap[key];
+    if (conditionExpr) {
+      return conditionExpr;
+    }
+  }
+  return null;
 }
 
 export class CouchFilterQueryOperation {
@@ -95,9 +113,75 @@ export class CouchFilterQueryOperation {
     return result;
   }
 
+  private operation__filterNot({
+    fieldName,
+    selectorObjValues,
+  }: {
+    fieldName: string;
+    selectorObjValues: any;
+  }): IQueryConditions | null {
+    const selector: Record<keyof IFuseKeyConditionParams, any> = { ...selectorObjValues };
+
+    const mConditions: IQueryConditions[] = [];
+
+    Object.entries(selector).forEach(([conditionKey, conditionValue]) => {
+      if (hasQueryKeyCondition(conditionKey)) {
+        const _conditionKey01 = conditionKey as keyof IFuseKeyConditionParams;
+
+        if (_conditionKey01 === "$beginsWith") {
+          const _queryConditions = this.operation__filterBeginsWith({
+            fieldName: fieldName,
+            term: conditionValue,
+          });
+          mConditions.push(_queryConditions);
+        } else if (_conditionKey01 === "$between") {
+          if (Array.isArray(conditionValue)) {
+            const _queryConditions = this.operation__filterBetween({
+              fieldName: fieldName,
+              from: conditionValue[0],
+              to: conditionValue[1],
+            });
+            mConditions.push(_queryConditions);
+          }
+        } else {
+          const conditionExpr: string = keyConditionMap[conditionKey];
+          if (conditionExpr) {
+            const _queryConditions = this.operation__helperFilterBasic({
+              fieldName: fieldName,
+              val: conditionValue,
+              conditionExpr: conditionExpr,
+            });
+            mConditions.push(_queryConditions);
+          } else {
+            //
+          }
+        }
+      }
+    });
+
+    if (mConditions.length) {
+      let selectorValuesAll: any = {};
+      for (const condition of mConditions) {
+        selectorValuesAll = { ...selectorValuesAll, ...condition[fieldName] };
+      }
+      const result = {
+        [fieldName]: { $not: selectorValuesAll },
+      } as IQueryConditions;
+      return result;
+    }
+    return null;
+  }
+
   private operation__filterContains({ fieldName, term }: { fieldName: string; term: string }): IQueryConditions {
     const result = {
       [fieldName]: { $regex: `(?i)${term}` },
+    } as IQueryConditions;
+    return result;
+  }
+
+  private operation__filterNotContains({ fieldName, term }: { fieldName: string; term: string }): IQueryConditions {
+    const result = {
+      [fieldName]: { $not: { $regex: `(?i)${term}` } },
     } as IQueryConditions;
     return result;
   }
@@ -174,13 +258,24 @@ export class CouchFilterQueryOperation {
             });
             queryConditions.push(_queryConditions);
           }
+        } else if (conditionKey === "$not") {
+          if (conditionValue && typeof conditionValue === "object") {
+            const _queryConditions = this.operation__filterNot({
+              fieldName: fieldName,
+              selectorObjValues: conditionValue,
+            });
+            if (_queryConditions) {
+              queryConditions.push(_queryConditions);
+            }
+          }
         } else if (conditionKey === "$notContains") {
-          // const _queryConditions = this.operation__filterContains({
-          //   fieldName: fieldName,
-          //   term: _conditionObjValue,
-          // });
-          // _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
-          // queryConditions.push(_queryConditions);
+          if (typeof conditionValue === "string") {
+            const _queryConditions = this.operation__filterNotContains({
+              fieldName: fieldName,
+              term: conditionValue,
+            });
+            queryConditions.push(_queryConditions);
+          }
         } else if (conditionKey === "$exists") {
           if (conditionValue === "true" || conditionValue === true) {
             const _queryConditions = this.operation__filterFieldExist({
@@ -194,16 +289,16 @@ export class CouchFilterQueryOperation {
             queryConditions.push(_queryConditions);
           }
         } else {
-          if (hasQueryConditionKey(conditionKey)) {
-            const conditionExpr = conditionKeyMap[conditionKey];
-            if (conditionExpr) {
-              const _queryConditions = this.operation__helperFilterBasic({
-                fieldName: fieldName,
-                val: conditionValue,
-                conditionExpr: conditionExpr,
-              });
-              queryConditions.push(_queryConditions);
-            }
+          const conditionExpr = getQueryConditionExpression(conditionKey);
+          if (conditionExpr) {
+            const _queryConditions = this.operation__helperFilterBasic({
+              fieldName: fieldName,
+              val: conditionValue,
+              conditionExpr: conditionExpr,
+            });
+            queryConditions.push(_queryConditions);
+          } else {
+            //
           }
         }
       }

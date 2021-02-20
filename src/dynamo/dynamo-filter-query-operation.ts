@@ -1,25 +1,31 @@
 import { LoggingService } from "../helpers/logging-service";
 import { UtilService } from "../helpers/util-service";
-import type { IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
+import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 
 // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
 
 type FieldPartial<T> = { [P in keyof T]-?: string };
-const conditionKeyMap: FieldPartial<IFuseQueryConditionParams> = {
+const keyConditionMap: FieldPartial<IFuseKeyConditionParams> = {
   $eq: "=",
-  $ne: "<>",
   $lt: "<",
   $lte: "<=",
   $gt: ">",
   $gte: ">=",
+  $beginsWith: "",
+  $between: "",
+};
+
+const conditionMapPre: FieldPartial<Omit<IFuseQueryConditionParams, keyof IFuseKeyConditionParams>> = {
+  $ne: "<>",
   $exists: "",
   $in: "",
   $nin: "",
-  $between: "",
+  $not: "",
   $contains: "",
   $notContains: "",
-  $beginsWith: "",
 };
+
+const conditionMap = { ...keyConditionMap, ...conditionMapPre };
 
 type IDictionaryAttr = { [key: string]: any };
 type IQueryConditions = {
@@ -28,9 +34,11 @@ type IQueryConditions = {
   xFilterExpression: string;
 };
 
-function hasQueryConditionKey(key: string) {
-  const queryCondKeys = Object.keys(conditionKeyMap);
-  return queryCondKeys.includes(key);
+function hasQueryConditionValue(key: string) {
+  if (key && Object.keys(conditionMap).includes(key) && conditionMap[key]) {
+    return true;
+  }
+  return false;
 }
 
 const getRandom = () =>
@@ -126,6 +134,35 @@ export class DynamoFilterQueryOperation {
     return result;
   }
 
+  private operation__filterNot({
+    fieldName,
+    selectorValues,
+  }: {
+    fieldName: string;
+    selectorValues: any;
+  }): IQueryConditions[] {
+    //
+    const selector: Record<keyof IFuseKeyConditionParams, any> = { ...selectorValues };
+
+    const queryConditions: IQueryConditions[] = [];
+
+    Object.entries(selector).forEach(([conditionKey, conditionValue]) => {
+      if (hasQueryConditionValue(conditionKey)) {
+        const conditionExpr = conditionMap[conditionKey];
+        if (conditionExpr) {
+          const _queryConditions = this.fuse__helperFilterBasic({
+            fieldName: fieldName,
+            val: conditionValue,
+            conditionExpr: conditionExpr,
+          });
+          _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
+          queryConditions.push(_queryConditions);
+        }
+      }
+    });
+    return queryConditions;
+  }
+
   private operation__filterBetween({
     fieldName,
     from,
@@ -215,6 +252,18 @@ export class DynamoFilterQueryOperation {
             _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
             queryConditions.push(_queryConditions);
           }
+        } else if (conditionKey === "$not") {
+          if (conditionValue && typeof conditionValue === "object") {
+            const _queryConditions = this.operation__filterNot({
+              fieldName: fieldName,
+              selectorValues: conditionValue,
+            });
+            if (_queryConditions?.length) {
+              for (const _queryCondition of _queryConditions) {
+                queryConditions.push(_queryCondition);
+              }
+            }
+          }
         } else if (conditionKey === "$notContains") {
           const _queryConditions = this.operation__filterContains({
             fieldName: fieldName,
@@ -235,8 +284,8 @@ export class DynamoFilterQueryOperation {
             queryConditions.push(_queryConditions);
           }
         } else {
-          if (hasQueryConditionKey(conditionKey)) {
-            const conditionExpr = conditionKeyMap[conditionKey];
+          if (hasQueryConditionValue(conditionKey)) {
+            const conditionExpr = conditionMap[conditionKey];
             if (conditionExpr) {
               const _queryConditions = this.fuse__helperFilterBasic({
                 fieldName: fieldName,

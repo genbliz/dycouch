@@ -52,6 +52,19 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
     });
   }
 
+  async getIt() {
+    await this.fuse_getManyBySecondaryIndex({
+      indexName: "xyz",
+      partitionKeyQuery: {
+        equals: "",
+      },
+      query: {
+        category: { $not: { $between: ["8849", "8859"] } },
+        invoiceId: { $notContains: "yes" },
+      },
+    });
+  }
+
   async create() {
     await this.fuse_updateOneById({
       dataId: "",

@@ -10,6 +10,7 @@ type TypeFallBack<T> = undefined extends T ? Exclude<T, undefined> : T;
 type TypeFallBackArray<T> = number extends T ? number[] : string extends T ? string[] : T;
 
 export type IFuseKeyConditionParams<T = any> = {
+  // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LegacyConditionalParameters.KeyConditions.html
   $eq?: TypeFallBack<T>;
   $gt?: TypeFallBack<T>;
   $gte?: TypeFallBack<T>;
@@ -20,12 +21,13 @@ export type IFuseKeyConditionParams<T = any> = {
 };
 
 export type IFuseQueryConditionParams<T = any> = IFuseKeyConditionParams<T> & {
+  $ne?: TypeFallBack<T>;
   $in?: TypeFallBackArray<T>;
   $nin?: TypeFallBackArray<T>;
   $contains?: string;
   $notContains?: string;
-  $ne?: TypeFallBack<T>;
   $exists?: boolean;
+  $not?: IFuseKeyConditionParams<T>;
 };
 
 type QueryPartialAll<T> = {
