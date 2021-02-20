@@ -155,7 +155,7 @@ export class DynamoFilterQueryOperation {
             val: conditionValue,
             conditionExpr: conditionExpr,
           });
-          _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
+          _queryConditions.xFilterExpression = `(NOT (${_queryConditions.xFilterExpression}))`;
           queryConditions.push(_queryConditions);
         }
       }
@@ -270,7 +270,7 @@ export class DynamoFilterQueryOperation {
             fieldName: fieldName,
             term: conditionValue,
           });
-          _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
+          _queryConditions.xFilterExpression = `NOT (${_queryConditions.xFilterExpression})`;
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$exists") {
           if (conditionValue === "true" || conditionValue === true) {
