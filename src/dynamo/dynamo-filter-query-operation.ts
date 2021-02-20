@@ -213,9 +213,10 @@ export class DynamoFilterQueryOperation {
     const queryConditions: IQueryConditions[] = [];
     Object.entries(queryObject).forEach(([condKey, conditionValue]) => {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
+      LoggingService.log({ conditionValue });
       if (conditionValue !== undefined) {
         if (conditionKey === "$between") {
-          if (Array.isArray(conditionValue)) {
+          if (conditionValue && Array.isArray(conditionValue)) {
             const _queryConditions = this.operation__filterBetween({
               fieldName: fieldName,
               from: conditionValue[0],
@@ -236,7 +237,7 @@ export class DynamoFilterQueryOperation {
           });
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$in") {
-          if (Array.isArray(conditionValue)) {
+          if (conditionValue && Array.isArray(conditionValue)) {
             const _queryConditions = this.operation__filterIn({
               fieldName: fieldName,
               attrValues: conditionValue,
@@ -244,7 +245,7 @@ export class DynamoFilterQueryOperation {
             queryConditions.push(_queryConditions);
           }
         } else if (conditionKey === "$nin") {
-          if (Array.isArray(conditionValue)) {
+          if (conditionValue && Array.isArray(conditionValue)) {
             const _queryConditions = this.operation__filterIn({
               fieldName: fieldName,
               attrValues: conditionValue,
@@ -298,6 +299,7 @@ export class DynamoFilterQueryOperation {
         }
       }
     });
+    LoggingService.log(queryConditions);
     return queryConditions;
   }
 
