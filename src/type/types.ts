@@ -7,7 +7,7 @@ type RequireAtLeastOne<T> = RequireAtLeastOneBase<T, keyof T>;
 
 // type TypeFallBack0<T> = number extends T ? number : string extends T ? string : T;
 type TypeFallBack<T> = undefined extends T ? Exclude<T, undefined> : T;
-type TypeFallBackStringOnly<T> = string extends T ? string : undefined extends T ? Exclude<T, undefined> : never;
+type TypeFallBackStringOnly<T> = undefined extends T ? Exclude<T, undefined> : string extends T ? string : T;
 type TypeFallBackArray<T> = number extends T ? number[] : string extends T ? string[] : T;
 
 export type IFuseKeyConditionParams<T = any> = {
