@@ -7,6 +7,7 @@ type RequireAtLeastOne<T> = RequireAtLeastOneBase<T, keyof T>;
 
 // type TypeFallBack0<T> = number extends T ? number : string extends T ? string : T;
 type TypeFallBack<T> = undefined extends T ? Exclude<T, undefined> : T;
+type TypeFallBackStringOnly<T> = string extends T ? string : never;
 type TypeFallBackArray<T> = number extends T ? number[] : string extends T ? string[] : T;
 
 export type IFuseKeyConditionParams<T = any> = {
@@ -17,15 +18,15 @@ export type IFuseKeyConditionParams<T = any> = {
   $lt?: TypeFallBack<T>;
   $lte?: TypeFallBack<T>;
   $between?: [TypeFallBack<T>, TypeFallBack<T>];
-  $beginsWith?: string;
+  $beginsWith?: TypeFallBackStringOnly<T>;
 };
 
 export type IFuseQueryConditionParams<T = any> = IFuseKeyConditionParams<T> & {
   $ne?: TypeFallBack<T>;
   $in?: TypeFallBackArray<T>;
   $nin?: TypeFallBackArray<T>;
-  $contains?: string;
-  $notContains?: string;
+  $contains?: TypeFallBackStringOnly<T>;
+  $notContains?: TypeFallBackStringOnly<T>;
   $exists?: boolean;
   $not?: IFuseKeyConditionParams<T>;
 };
@@ -49,10 +50,6 @@ export type IFusePagingParams = {
   lastKeyHash?: any;
   orderDesc?: boolean;
 };
-
-// export type IQueryDefinition<T> = QueryPartialAll<RequireAtLeastOne<T>> & {
-//   $or?: QueryPartialAll<RequireAtLeastOne<T>>[];
-// };
 
 type IQueryDefOr<T> = { $or?: QueryPartialAll<RequireAtLeastOne<T>>[] };
 type IQueryDefAnd<T> = { $and?: QueryPartialAll<RequireAtLeastOne<T>>[] };

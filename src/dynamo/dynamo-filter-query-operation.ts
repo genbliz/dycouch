@@ -42,7 +42,12 @@ function hasQueryConditionValue(key: string) {
 }
 
 const getRandom = () =>
-  [Math.round(Math.random() * 99999), Math.round(Math.random() * 88888), Math.round(Math.random() * 99)].join("");
+  [
+    //
+    Math.round(Math.random() * 99999),
+    Math.round(Math.random() * 88888),
+    Math.round(Math.random() * 77777),
+  ].join("");
 
 export class DynamoFilterQueryOperation {
   private operation__filterFieldExist({ fieldName }: { fieldName: string }): IQueryConditions {
@@ -157,7 +162,7 @@ export class DynamoFilterQueryOperation {
           });
           mConditions.push(_queryConditions);
         } else if (_conditionKey01 === "$between") {
-          if (Array.isArray(conditionValue)) {
+          if (conditionValue && Array.isArray(conditionValue)) {
             const _queryConditions = this.operation__filterBetween({
               fieldName: fieldName,
               from: conditionValue[0],
@@ -483,10 +488,10 @@ export class DynamoFilterQueryOperation {
       NOT_inside_OR_FilterExpressionArray.push(item4.xFilterExpression);
     }
 
-    let _andfilterExpression: string | null = null;
-    let _orfilterExpression: string | null = null;
-    let _notfilterExpression: string | null = null;
-    let _notInsideOrFilterExpression: string | null = null;
+    let _andfilterExpression: string = "";
+    let _orfilterExpression: string = "";
+    let _notfilterExpression: string = "";
+    let _notInsideOrFilterExpression: string = "";
 
     if (AND_FilterExpressionArray?.length) {
       _andfilterExpression = AND_FilterExpressionArray.join(" AND ").trim();
@@ -511,7 +516,7 @@ export class DynamoFilterQueryOperation {
       _notfilterExpression,
       _orfilterExpression,
       _notInsideOrFilterExpression,
-    ].filter((f) => f) as string[];
+    ].filter((f) => f);
 
     if (allFilters?.length && allFilters.length > 1) {
       allFilters = allFilters.map((f) => `(${f})`);
@@ -519,20 +524,10 @@ export class DynamoFilterQueryOperation {
 
     const _filterExpression: string = allFilters.join(" AND ");
 
-    // if (_andfilterExpression && _orfilterExpression) {
-    //   _filterExpression = `(${_andfilterExpression}) AND (${_orfilterExpression})`;
-    //   //
-    // } else if (_andfilterExpression) {
-    //   _filterExpression = _andfilterExpression;
-    //   //
-    // } else if (_orfilterExpression) {
-    //   _filterExpression = _orfilterExpression;
-    // }
-
     if (projectionFields?.length && Array.isArray(projectionFields)) {
       const _projection_expressionAttributeNames: IDictionaryAttr = {};
       projectionFields.forEach((field) => {
-        if (typeof field === "string") {
+        if (field && typeof field === "string") {
           const attrKeyHash = `#attrKey8${getRandom()}`.toLowerCase();
           _projection_expressionAttributeNames[attrKeyHash] = field;
         }

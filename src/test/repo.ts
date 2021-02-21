@@ -19,7 +19,6 @@ const _searchTerm = "";
 
 export const paramOptions: IFuseQueryDefinition<IPayment> = {
   $or: [
-    { amount: { $contains: _searchTerm } },
     { category: { $contains: _searchTerm } },
     { invoiceId: { $contains: _searchTerm } },
     { transactionId: { $contains: _searchTerm } },
