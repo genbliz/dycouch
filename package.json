@@ -1,6 +1,6 @@
 {
   "name": "fuse-dynamo-couch",
-  "version": "0.0.30",
+  "version": "0.0.31",
   "description": "An implimentation of single table design, using pouchdb for local data and dynamodb for remote database.",
   "esnext": "dist-src/index.js",
   "main": "dist-dist/index.js",
