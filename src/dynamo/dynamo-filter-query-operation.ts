@@ -144,22 +144,41 @@ export class DynamoFilterQueryOperation {
     //
     const selector: Record<keyof IFuseKeyConditionParams, any> = { ...selectorValues };
 
-    const queryConditions: IQueryConditions[] = [];
+    const mConditions: IQueryConditions[] = [];
 
     Object.entries(selector).forEach(([conditionKey, conditionValue]) => {
       if (hasQueryConditionValue(conditionKey)) {
-        const conditionExpr = conditionMap[conditionKey];
-        if (conditionExpr) {
-          const _queryConditions = this.fuse__helperFilterBasic({
+        const _conditionKey01 = conditionKey as keyof IFuseKeyConditionParams;
+
+        if (_conditionKey01 === "$beginsWith") {
+          const _queryConditions = this.operation__filterBeginsWith({
             fieldName: fieldName,
-            val: conditionValue,
-            conditionExpr: conditionExpr,
+            term: conditionValue,
           });
-          queryConditions.push(_queryConditions);
+          mConditions.push(_queryConditions);
+        } else if (_conditionKey01 === "$between") {
+          if (Array.isArray(conditionValue)) {
+            const _queryConditions = this.operation__filterBetween({
+              fieldName: fieldName,
+              from: conditionValue[0],
+              to: conditionValue[1],
+            });
+            mConditions.push(_queryConditions);
+          }
+        } else {
+          const conditionExpr = conditionMap[conditionKey];
+          if (conditionExpr) {
+            const _queryConditions = this.fuse__helperFilterBasic({
+              fieldName: fieldName,
+              val: conditionValue,
+              conditionExpr: conditionExpr,
+            });
+            mConditions.push(_queryConditions);
+          }
         }
       }
     });
-    return queryConditions;
+    return mConditions;
   }
 
   private operation__filterBetween({
