@@ -2,6 +2,7 @@ import { marshall } from "@aws-sdk/util-dynamodb";
 import type { IFusePagingResult } from "../type/types";
 import { LoggingService } from "../helpers/logging-service";
 import type { DynamoDB, QueryInput, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
+import { FuseUtil } from "src/helpers/fuse-utils";
 
 export class DynamoQueryScanProcessor {
   //
@@ -29,7 +30,7 @@ export class DynamoQueryScanProcessor {
       });
       params.ExpressionAttributeValues = marshalled;
     }
-    return await this.__helperDynamoQueryScanProcessor<T>({
+    const results = await this.__helperDynamoQueryScanProcessor<T>({
       dynamoDb,
       operation: "query",
       evaluationLimit,
@@ -39,6 +40,8 @@ export class DynamoQueryScanProcessor {
       orderDesc,
       hashKeyAndSortKey,
     });
+    results.mainResult = this.__unmarshallToJson(results.mainResult);
+    return results;
   }
 
   private __helperDynamoQueryScanProcessor<T>({
@@ -189,6 +192,16 @@ export class DynamoQueryScanProcessor {
         });
       }
     });
+  }
+
+  private __unmarshallToJson(items: any[]) {
+    if (items?.length) {
+      const itemList = items.map((item) => {
+        return FuseUtil.fuse_unmarshallToJson(item);
+      });
+      return itemList;
+    }
+    return items;
   }
 
   private __encodeLastKey(lastEvaluatedKey: any) {

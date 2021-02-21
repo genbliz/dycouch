@@ -566,10 +566,12 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
         } else {
           if (data?.Responses) {
             const itemListRaw = data.Responses[tableFullName];
-            const itemList = itemListRaw.map((item) => {
-              return FuseUtil.fuse_unmarshallToJson(item);
-            });
-            returnedItems = [...returnedItems, ...itemList];
+            if (itemListRaw?.length) {
+              const itemList = itemListRaw.map((item) => {
+                return FuseUtil.fuse_unmarshallToJson(item);
+              });
+              returnedItems = [...returnedItems, ...itemList];
+            }
           }
 
           if (data?.UnprocessedKeys && Object.keys(data.UnprocessedKeys).length) {
