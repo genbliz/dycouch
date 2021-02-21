@@ -5,9 +5,15 @@ type RequireAtLeastOneBase<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<
   }[Keys];
 type RequireAtLeastOne<T> = RequireAtLeastOneBase<T, keyof T>;
 
-// type TypeFallBack0<T> = number extends T ? number : string extends T ? string : T;
+type TypeFallBackStringOnly<T> = number extends T
+  ? never
+  : string extends T
+  ? string
+  : undefined extends T
+  ? never
+  : never;
 type TypeFallBack<T> = undefined extends T ? Exclude<T, undefined> : T;
-type TypeFallBackStringOnly<T> = undefined extends T ? Exclude<T, undefined> : string extends T ? string : T;
+// type TypeFallBackStringOnly<T> = undefined extends T ? Exclude<T, undefined> : string extends T ? string : T;
 type TypeFallBackArray<T> = number extends T ? number[] : string extends T ? string[] : T;
 
 export type IFuseKeyConditionParams<T = any> = {
