@@ -211,6 +211,7 @@ export class DynamoFilterQueryOperation {
     queryObject: Record<string, any>;
   }) {
     const queryConditions: IQueryConditions[] = [];
+    const notConditions: IQueryConditions[] = [];
     Object.entries(queryObject).forEach(([condKey, conditionValue]) => {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
       LoggingService.log({ conditionValue });
@@ -261,7 +262,7 @@ export class DynamoFilterQueryOperation {
             });
             if (_queryConditions?.length) {
               for (const _queryCondition of _queryConditions) {
-                queryConditions.push(_queryCondition);
+                notConditions.push(_queryCondition);
               }
             }
           }
@@ -300,7 +301,7 @@ export class DynamoFilterQueryOperation {
       }
     });
     LoggingService.log(queryConditions);
-    return queryConditions;
+    return { queryConditions, notConditions };
   }
 
   private operation_translateBasicQueryOperation({ fieldName, queryObject }: { fieldName: string; queryObject: any }) {
@@ -319,14 +320,15 @@ export class DynamoFilterQueryOperation {
     queryDefs: IFuseQueryDefinition<any>["query"];
     projectionFields: any[] | undefined | null;
   }) {
-    let queryAndConditions: IQueryConditions[] = [];
-    let queryOrConditions: IQueryConditions[] = [];
+    let AND_queryConditions: IQueryConditions[] = [];
+    let OR_queryConditions: IQueryConditions[] = [];
+    let NOT_queryConditions: IQueryConditions[] = [];
+    let NOT_inside_OR_queryConditions: IQueryConditions[] = [];
     //
-    let _projectionExpression: string | undefined = undefined;
-    const andFilterExpressionArray: string[] = [];
-    const orFilterExpressionArray: string[] = [];
-    let _expressionAttributeValues: IDictionaryAttr = {};
-    let _expressionAttributeNames: IDictionaryAttr = {};
+    const AND_FilterExpressionArray: string[] = [];
+    const OR_FilterExpressionArray: string[] = [];
+    const NOT_FilterExpressionArray: string[] = [];
+    const NOT_inside_OR_FilterExpressionArray: string[] = [];
 
     Object.keys(queryDefs).forEach((fieldName_Or_And) => {
       if (fieldName_Or_And === "$or") {
@@ -344,13 +346,14 @@ export class DynamoFilterQueryOperation {
                     fieldName,
                     queryObject: orQueryObjectOrValue,
                   });
-                  queryOrConditions = [...queryOrConditions, ..._orQueryCond];
+                  OR_queryConditions = [...OR_queryConditions, ..._orQueryCond.queryConditions];
+                  NOT_inside_OR_queryConditions = [...NOT_inside_OR_queryConditions, ..._orQueryCond.notConditions];
                 } else {
                   const _orQueryConditions = this.operation_translateBasicQueryOperation({
                     fieldName,
                     queryObject: orQueryObjectOrValue,
                   });
-                  queryOrConditions = [...queryOrConditions, _orQueryConditions];
+                  OR_queryConditions = [...OR_queryConditions, _orQueryConditions];
                 }
               }
             });
@@ -371,13 +374,14 @@ export class DynamoFilterQueryOperation {
                     fieldName,
                     queryObject: andQueryObjectOrValue,
                   });
-                  queryAndConditions = [...queryAndConditions, ..._andQueryCond];
+                  AND_queryConditions = [...AND_queryConditions, ..._andQueryCond.queryConditions];
+                  NOT_queryConditions = [...NOT_queryConditions, ..._andQueryCond.notConditions];
                 } else {
                   const _andQueryConditions = this.operation_translateBasicQueryOperation({
                     fieldName,
                     queryObject: andQueryObjectOrValue,
                   });
-                  queryAndConditions = [...queryAndConditions, _andQueryConditions];
+                  AND_queryConditions = [...AND_queryConditions, _andQueryConditions];
                 }
               }
             });
@@ -394,20 +398,26 @@ export class DynamoFilterQueryOperation {
                 fieldName: fieldName2,
                 queryObject: queryObjectOrValue,
               });
-              queryAndConditions = [...queryAndConditions, ..._queryCond];
+              AND_queryConditions = [...AND_queryConditions, ..._queryCond.queryConditions];
+              NOT_queryConditions = [...NOT_queryConditions, ..._queryCond.notConditions];
             } else {
               const _queryConditions = this.operation_translateBasicQueryOperation({
                 fieldName: fieldName2,
                 queryObject: queryObjectOrValue,
               });
-              queryAndConditions = [...queryAndConditions, _queryConditions];
+              AND_queryConditions = [...AND_queryConditions, _queryConditions];
             }
           }
         }
       }
     });
 
-    for (const item of queryAndConditions) {
+    let _expressionAttributeValues: IDictionaryAttr = {};
+    let _expressionAttributeNames: IDictionaryAttr = {};
+    let _projectionExpression: string | undefined = undefined;
+    //
+
+    for (const item of AND_queryConditions) {
       _expressionAttributeNames = {
         ..._expressionAttributeNames,
         ...item.xExpressionAttributeNames,
@@ -416,10 +426,10 @@ export class DynamoFilterQueryOperation {
         ..._expressionAttributeValues,
         ...item.xExpressionAttributeValues,
       };
-      andFilterExpressionArray.push(item.xFilterExpression);
+      AND_FilterExpressionArray.push(item.xFilterExpression);
     }
 
-    for (const item2 of queryOrConditions) {
+    for (const item2 of OR_queryConditions) {
       _expressionAttributeNames = {
         ..._expressionAttributeNames,
         ...item2.xExpressionAttributeNames,
@@ -428,31 +438,78 @@ export class DynamoFilterQueryOperation {
         ..._expressionAttributeValues,
         ...item2.xExpressionAttributeValues,
       };
-      orFilterExpressionArray.push(item2.xFilterExpression);
+      OR_FilterExpressionArray.push(item2.xFilterExpression);
+    }
+
+    for (const item3 of NOT_queryConditions) {
+      _expressionAttributeNames = {
+        ..._expressionAttributeNames,
+        ...item3.xExpressionAttributeNames,
+      };
+      _expressionAttributeValues = {
+        ..._expressionAttributeValues,
+        ...item3.xExpressionAttributeValues,
+      };
+      NOT_FilterExpressionArray.push(item3.xFilterExpression);
+    }
+
+    for (const item4 of NOT_inside_OR_queryConditions) {
+      _expressionAttributeNames = {
+        ..._expressionAttributeNames,
+        ...item4.xExpressionAttributeNames,
+      };
+      _expressionAttributeValues = {
+        ..._expressionAttributeValues,
+        ...item4.xExpressionAttributeValues,
+      };
+      NOT_inside_OR_FilterExpressionArray.push(item4.xFilterExpression);
     }
 
     let _andfilterExpression: string | null = null;
     let _orfilterExpression: string | null = null;
+    let _notfilterExpression: string | null = null;
+    let _notInsideOrFilterExpression: string | null = null;
 
-    if (andFilterExpressionArray?.length) {
-      _andfilterExpression = andFilterExpressionArray.join(" AND ").trim();
+    if (AND_FilterExpressionArray?.length) {
+      _andfilterExpression = AND_FilterExpressionArray.join(" AND ").trim();
     }
 
-    if (orFilterExpressionArray?.length) {
-      _orfilterExpression = orFilterExpressionArray.join(" OR ").trim();
+    if (OR_FilterExpressionArray?.length) {
+      _orfilterExpression = OR_FilterExpressionArray.join(" OR ").trim();
     }
 
-    let _filterExpression: string = "";
-
-    if (_andfilterExpression && _orfilterExpression) {
-      _filterExpression = `(${_andfilterExpression}) AND (${_orfilterExpression})`;
-      //
-    } else if (_andfilterExpression) {
-      _filterExpression = _andfilterExpression;
-      //
-    } else if (_orfilterExpression) {
-      _filterExpression = _orfilterExpression;
+    if (NOT_FilterExpressionArray?.length) {
+      _notfilterExpression = NOT_FilterExpressionArray.join(" AND ").trim();
+      _notfilterExpression = `NOT (${_notfilterExpression})`;
     }
+
+    if (NOT_inside_OR_FilterExpressionArray?.length) {
+      _notInsideOrFilterExpression = NOT_inside_OR_FilterExpressionArray.join(" OR ").trim();
+      _notInsideOrFilterExpression = `NOT (${_notInsideOrFilterExpression})`;
+    }
+
+    let allFilters = [
+      _andfilterExpression,
+      _notfilterExpression,
+      _orfilterExpression,
+      _notInsideOrFilterExpression,
+    ].filter((f) => f) as string[];
+
+    if (allFilters?.length && allFilters.length > 1) {
+      allFilters = allFilters.map((f) => `(${f})`);
+    }
+
+    const _filterExpression: string = allFilters.join(" AND ");
+
+    // if (_andfilterExpression && _orfilterExpression) {
+    //   _filterExpression = `(${_andfilterExpression}) AND (${_orfilterExpression})`;
+    //   //
+    // } else if (_andfilterExpression) {
+    //   _filterExpression = _andfilterExpression;
+    //   //
+    // } else if (_orfilterExpression) {
+    //   _filterExpression = _orfilterExpression;
+    // }
 
     if (projectionFields?.length && Array.isArray(projectionFields)) {
       const _projection_expressionAttributeNames: IDictionaryAttr = {};

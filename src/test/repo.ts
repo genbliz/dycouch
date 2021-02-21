@@ -61,6 +61,7 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
       query: {
         category: { $not: { $between: ["8849", "8859"] } },
         invoiceId: { $notContains: "yes" },
+        $or: [{ amount: { $not: { $between: [9, 6] } } }],
       },
     });
   }
