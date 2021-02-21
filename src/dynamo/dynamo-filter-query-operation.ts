@@ -155,7 +155,6 @@ export class DynamoFilterQueryOperation {
             val: conditionValue,
             conditionExpr: conditionExpr,
           });
-          _queryConditions.xFilterExpression = `(NOT (${_queryConditions.xFilterExpression}))`;
           queryConditions.push(_queryConditions);
         }
       }
