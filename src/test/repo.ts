@@ -58,9 +58,10 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
         equals: "",
       },
       query: {
-        category: { $not: { $between: ["8849", "8859"] } },
-        invoiceId: { $notContains: "yes" },
-        $or: [{ amount: { $not: { $between: [9, 6] } } }],
+        // category: { $not: { $between: ["8849", "8859"] } },
+        category: { $exists: true },
+        // amount: { $beginsWith: "" },
+        // $or: [{ amount: { $not: { $beginsWith: "null" } } }],
       },
     });
   }
@@ -77,8 +78,8 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
       },
       withCondition: [
         {
-          field: "invoiceId",
-          equals: "",
+          field: "category",
+          equals: "hello",
         },
       ],
     });
