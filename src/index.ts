@@ -17,3 +17,5 @@ export { CouchDataOperation } from "./couch/couch-data-operation";
 export { FuseInitializerDynamo } from "./dynamo/dynamo-initializer";
 export { FuseInitializerCouch } from "./couch/couch-initializer";
 export { FuseUtil } from "./helpers/fuse-utils";
+export { MongoDataOperation } from "./mongo/mongo-data-operation";
+export { FuseInitializerMongo } from "./mongo/mongo-initializer";

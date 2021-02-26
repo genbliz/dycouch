@@ -58,9 +58,9 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
         equals: "",
       },
       query: {
-        // category: { $not: { $between: ["8849", "8859"] } },
-        category: { $exists: true },
-        // amount: { $beginsWith: "" },
+        category: { $gt: undefined },
+        // category: { $exists: true },
+        amount: { $beginsWith: 0 },
         // $or: [{ amount: { $not: { $beginsWith: "null" } } }],
       },
     });
