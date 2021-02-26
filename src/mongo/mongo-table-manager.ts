@@ -10,6 +10,35 @@ interface ITableOptions<T> {
   sortKeyFieldName: string;
 }
 
+/*
+[
+    {
+      "v": 2,
+      "key": {
+        "_id": 1
+      },
+      "name": "_id_",
+      "ns": "hospimandbv2dev.pay_point_all"
+    },
+    {
+      "v": 2,
+      "key": {
+        "featureEntity": 1,
+        "createdAtDate": 1
+      },
+      "name": "featureEntity_createdAtDate_index",
+      "ns": "hospimandbv2dev.pay_point_all"
+    }
+
+*/
+
+interface IIndexModel {
+  v: string;
+  key: Record<string, 1 | -1>;
+  name: string;
+  ns: string;
+}
+
 export class MongoManageTable<T> {
   private readonly partitionKeyFieldName: string;
   private readonly sortKeyFieldName: string;
@@ -55,13 +84,25 @@ export class MongoManageTable<T> {
 
   async fuse_clearAllIndexes() {
     const db = await this._fuse_getInstance();
-    const indexes = await db.indexes();
-    return indexes;
+    const indexes = await this.fuse_getIndexes();
+    const dropedIndexes: IIndexModel[] = [];
+    if (indexes?.length) {
+      for (const index01 of indexes) {
+        if (index01.name !== "_id_") {
+          await db.dropIndex(index01.name);
+          dropedIndexes.push(index01);
+        }
+      }
+    }
+    return {
+      indexes,
+      dropedIndexes,
+    };
   }
 
   async fuse_getIndexes() {
     const db = await this._fuse_getInstance();
-    const indexes = await db.indexes();
+    const indexes: IIndexModel[] = await db.indexes();
     return indexes;
   }
 
