@@ -196,7 +196,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return new FuseGenericError(error);
   }
 
-  protected async fuse_getOneById({
+  async fuse_getOneById({
     dataId,
     withCondition,
   }: {
@@ -221,7 +221,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return dataInDb;
   }
 
-  protected async fuse_getManyByIds({
+  async fuse_getManyByIds({
     dataIds,
     fields,
     withCondition,
@@ -242,7 +242,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return await db.find(query, { projection: projection }).toArray();
   }
 
-  protected async fuse_createOne({ data }: { data: T }): Promise<T> {
+  async fuse_createOne({ data }: { data: T }): Promise<T> {
     this._fuse_checkValidateStrictRequiredFields(data);
 
     const { partitionKeyFieldName } = this._fuse_getLocalVariables();
@@ -274,7 +274,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return final;
   }
 
-  protected async fuse_updateOneById({
+  async fuse_updateOneById({
     dataId,
     data,
     withCondition,
@@ -311,13 +311,13 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return final;
   }
 
-  protected fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
+  fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
     const dataInput: IFullEntity<T> = data as any;
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId: dataInput.id });
     return this.fuse_updateOneById({ data, dataId: dataInput.id });
   }
 
-  protected async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
+  async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<T[]> {
     paramOption.pagingParams = undefined;
@@ -328,7 +328,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return [];
   }
 
-  protected async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
+  async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
   ): Promise<IFusePagingResult<T[]>> {
     const { secondaryIndexOptions } = this._fuse_getLocalVariables();
@@ -393,7 +393,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     };
   }
 
-  protected async fuse_deleteById({
+  async fuse_deleteById({
     dataId,
     withCondition,
   }: {
