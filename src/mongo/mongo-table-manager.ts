@@ -10,28 +10,6 @@ interface ITableOptions<T> {
   sortKeyFieldName: string;
 }
 
-/*
-[
-    {
-      "v": 2,
-      "key": {
-        "_id": 1
-      },
-      "name": "_id_",
-      "ns": "hospimandbv2dev.pay_point_all"
-    },
-    {
-      "v": 2,
-      "key": {
-        "featureEntity": 1,
-        "createdAtDate": 1
-      },
-      "name": "featureEntity_createdAtDate_index",
-      "ns": "hospimandbv2dev.pay_point_all"
-    }
-
-*/
-
 interface IIndexModel {
   v: string;
   key: Record<string, 1 | -1>;
@@ -71,7 +49,7 @@ export class MongoManageTable<T> {
     return this.mongoDb().getDbInstance();
   }
 
-  async fuse_createIndex({ indexName, fields }: { indexName: string; fields: string[] }) {
+  async fuse_createIndex({ indexName, fields }: { indexName: string; fields: string[] }): Promise<string> {
     const db = await this._fuse_getInstance();
     const indexObject: Record<string, 1 | -1> = {};
     fields.forEach((key) => {
@@ -100,7 +78,7 @@ export class MongoManageTable<T> {
     };
   }
 
-  async fuse_getIndexes() {
+  async fuse_getIndexes(): Promise<IIndexModel[]> {
     const db = await this._fuse_getInstance();
     const indexes: IIndexModel[] = await db.indexes();
     return indexes;

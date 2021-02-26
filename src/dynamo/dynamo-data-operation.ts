@@ -21,7 +21,7 @@ import { FuseInitializerDynamo } from "./dynamo-initializer";
 import { DynamoFilterQueryOperation } from "./dynamo-filter-query-operation";
 import { DynamoQueryScanProcessor } from "./dynamo-query-scan-processor";
 
-interface IDynamoOptions<T> {
+interface IOptions<T> {
   schemaDef: Joi.SchemaMap;
   dynamoDb: () => FuseInitializerDynamo;
   dataKeyGenerator: () => string;
@@ -65,7 +65,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     baseTableName,
     strictRequiredFields,
     dataKeyGenerator,
-  }: IDynamoOptions<T>) {
+  }: IOptions<T>) {
     super();
     this._fuse_dynamoDb = dynamoDb;
     this._fuse_dataKeyGenerator = dataKeyGenerator;
@@ -639,12 +639,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
 
     const fieldKeys = paramOption.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields) : undefined;
 
-    const {
-      expressionAttributeValues,
-      filterExpression,
-      projectionExpressionAttr,
-      expressionAttributeNames,
-    } = this._fuse_queryFilter.fuse__helperDynamoFilterOperation({
+    const mainFilter = this._fuse_queryFilter.processQueryFilter({
       queryDefs: partitionSortKeyQuery,
       projectionFields: fieldKeys,
     });
@@ -652,32 +647,33 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     let otherFilterExpression: string | undefined = undefined;
     let otherExpressionAttributeValues: any = undefined;
     let otherExpressionAttributeNames: any = undefined;
+
     if (paramOption.query) {
-      const otherAttr = this._fuse_queryFilter.fuse__helperDynamoFilterOperation({
+      const otherFilter = this._fuse_queryFilter.processQueryFilter({
         queryDefs: paramOption.query,
         projectionFields: null,
       });
 
-      otherExpressionAttributeValues = otherAttr.expressionAttributeValues;
-      otherExpressionAttributeNames = otherAttr.expressionAttributeNames;
+      otherExpressionAttributeValues = otherFilter.expressionAttributeValues;
+      otherExpressionAttributeNames = otherFilter.expressionAttributeNames;
 
-      if (otherAttr?.filterExpression?.length && otherAttr?.filterExpression.length > 1) {
-        otherFilterExpression = otherAttr.filterExpression;
+      if (otherFilter?.filterExpression?.length && otherFilter?.filterExpression.length > 1) {
+        otherFilterExpression = otherFilter.filterExpression;
       }
     }
 
     const params: QueryInput = {
       TableName: tableFullName,
       IndexName: paramOption.indexName,
-      KeyConditionExpression: filterExpression,
+      KeyConditionExpression: mainFilter.filterExpression,
       ExpressionAttributeValues: {
         ...otherExpressionAttributeValues,
-        ...expressionAttributeValues,
+        ...mainFilter.expressionAttributeValues,
       },
       FilterExpression: otherFilterExpression ?? undefined,
       ExpressionAttributeNames: {
         ...otherExpressionAttributeNames,
-        ...expressionAttributeNames,
+        ...mainFilter.expressionAttributeNames,
       },
     };
 
@@ -687,8 +683,8 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       params.ScanIndexForward = false;
     }
 
-    if (projectionExpressionAttr) {
-      params.ProjectionExpression = projectionExpressionAttr;
+    if (mainFilter.projectionExpressionAttr) {
+      params.ProjectionExpression = mainFilter.projectionExpressionAttr;
     }
 
     const hashKeyAndSortKey: [string, string] = [partitionKeyFieldName, sortKeyFieldName];

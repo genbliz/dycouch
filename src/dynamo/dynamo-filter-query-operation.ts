@@ -72,7 +72,7 @@ export class DynamoFilterQueryOperation {
     return result;
   }
 
-  fuse__helperFilterBasic({
+  private operation__helperFilterBasic({
     fieldName,
     val,
     conditionExpr,
@@ -173,7 +173,7 @@ export class DynamoFilterQueryOperation {
         } else {
           const conditionExpr = conditionMap[conditionKey];
           if (conditionExpr) {
-            const _queryConditions = this.fuse__helperFilterBasic({
+            const _queryConditions = this.operation__helperFilterBasic({
               fieldName: fieldName,
               val: conditionValue,
               conditionExpr: conditionExpr,
@@ -312,7 +312,7 @@ export class DynamoFilterQueryOperation {
           if (hasQueryConditionValue(conditionKey)) {
             const conditionExpr = conditionMap[conditionKey];
             if (conditionExpr) {
-              const _queryConditions = this.fuse__helperFilterBasic({
+              const _queryConditions = this.operation__helperFilterBasic({
                 fieldName: fieldName,
                 val: conditionValue,
                 conditionExpr: conditionExpr,
@@ -328,7 +328,7 @@ export class DynamoFilterQueryOperation {
   }
 
   private operation_translateBasicQueryOperation({ fieldName, queryObject }: { fieldName: string; queryObject: any }) {
-    const _queryConditions = this.fuse__helperFilterBasic({
+    const _queryConditions = this.operation__helperFilterBasic({
       fieldName: fieldName,
       val: queryObject,
       conditionExpr: "=",
@@ -336,7 +336,7 @@ export class DynamoFilterQueryOperation {
     return _queryConditions;
   }
 
-  fuse__helperDynamoFilterOperation({
+  processQueryFilter({
     queryDefs,
     projectionFields,
   }: {
@@ -553,7 +553,7 @@ export class DynamoFilterQueryOperation {
       projectionExpressionAttr: _projectionExpression,
       expressionAttributeNames: _expressionAttributeNamesFinal,
     };
-    LoggingService.log({ queryExpressions });
+    LoggingService.log(JSON.stringify({ queryExpressions }, null, 2));
     return queryExpressions;
   }
 }

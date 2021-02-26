@@ -88,7 +88,7 @@ export class CouchManageTable<T> {
     return this._fuse_getInstance().getIndexes();
   }
 
-  fuse_createDatabse() {
+  fuse_createDatabase() {
     return this._fuse_getInstance().createDatabase();
   }
 

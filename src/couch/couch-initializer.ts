@@ -1,3 +1,4 @@
+import { LoggingService } from "../helpers/logging-service";
 import type { IFuseCoreEntityModel } from "../core/base-schema";
 import Nano from "nano";
 
@@ -83,7 +84,7 @@ export class FuseInitializerCouch {
       path: "_index",
       content_type: "application/json",
     });
-    console.log({ indexes: result });
+    LoggingService.log({ indexes: result });
     return result;
     //GET /{db}/_index
   }
@@ -103,7 +104,7 @@ export class FuseInitializerCouch {
       method: "HEAD",
       content_type: "application/json",
     });
-    console.log(JSON.stringify({ checkDbExistResult }, null, 2));
+    LoggingService.log(JSON.stringify({ checkDbExistResult }, null, 2));
     return checkDbExistResult;
   }
 

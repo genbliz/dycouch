@@ -14,7 +14,7 @@ import { FuseInitializerMongo } from "./mongo-initializer";
 import { MongoFilterQueryOperation } from "./mongo-filter-query-operation";
 import { MongoManageTable } from "./mongo-table-manager";
 
-interface IDynamoOptions<T> {
+interface IOptions<T> {
   schemaDef: Joi.SchemaMap;
   mongoDb: () => FuseInitializerMongo;
   dataKeyGenerator: () => string;
@@ -54,7 +54,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     baseTableName,
     strictRequiredFields,
     dataKeyGenerator,
-  }: IDynamoOptions<T>) {
+  }: IOptions<T>) {
     super();
     this._fuse_mongoDb = mongoDb;
     this._fuse_dataKeyGenerator = dataKeyGenerator;

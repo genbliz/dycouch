@@ -14,7 +14,7 @@ import { getJoiValidationErrors } from "../helpers/base-joi-helper";
 import { CouchFilterQueryOperation } from "./couch-filter-query-operation";
 import { CouchManageTable } from "./couch-manage-table";
 
-interface IDynamoOptions<T> {
+interface IOptions<T> {
   schemaDef: Joi.SchemaMap;
   couchDb: () => FuseInitializerCouch;
   dataKeyGenerator: () => string;
@@ -54,7 +54,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     baseTableName,
     strictRequiredFields,
     dataKeyGenerator,
-  }: IDynamoOptions<T>) {
+  }: IOptions<T>) {
     super();
     this._fuse_couchDb = couchDb;
     this._fuse_dataKeyGenerator = dataKeyGenerator;

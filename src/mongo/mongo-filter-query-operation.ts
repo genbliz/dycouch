@@ -1,3 +1,4 @@
+import { LoggingService } from "./../helpers/logging-service";
 import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 // https://docs.mongodb.com/drivers/node/fundamentals/crud/
 
@@ -419,6 +420,7 @@ export class MongoFilterQueryOperation {
     if (queryOrConditions?.length) {
       queryAllConditions.$or = queryOrConditions;
     }
+    LoggingService.log(JSON.stringify({ queryAllConditions }, null, 2));
     return queryAllConditions;
   }
 }
