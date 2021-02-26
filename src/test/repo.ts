@@ -60,7 +60,7 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
       query: {
         category: { $gt: undefined },
         // category: { $exists: true },
-        amount: { $beginsWith: 0 },
+        // amount: { $beginsWith: 0 },
         // $or: [{ amount: { $not: { $beginsWith: "null" } } }],
       },
     });
