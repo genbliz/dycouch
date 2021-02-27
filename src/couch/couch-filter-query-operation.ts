@@ -1,4 +1,4 @@
-import { QueryValidatorCheck } from "src/helpers/query-validator";
+import { QueryValidatorCheck } from "../helpers/query-validator";
 import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 // https://docs.couchdb.org/en/latest/api/database/find.html
 
