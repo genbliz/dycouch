@@ -9,7 +9,7 @@ type TypeFallBackStringOnly<T> = Extract<T, string>;
 type TypeFallBack<T> = undefined extends T ? Exclude<T, undefined> : T;
 type TypeFallBackArray<T> = number extends T ? number[] : string extends T ? string[] : T;
 
-export type IFuseKeyConditionParams<T = any> = {
+export type IFuseKeyConditionParams<T = string> = {
   // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LegacyConditionalParameters.KeyConditions.html
   $eq?: TypeFallBack<T>;
   $gt?: TypeFallBack<T>;
@@ -41,6 +41,7 @@ type QueryKeyConditionBasic<T> = {
 export interface IFusePagingResult<T> {
   lastKeyHash?: any;
   mainResult: T;
+  count?: number;
 }
 
 export type IFusePagingParams = {

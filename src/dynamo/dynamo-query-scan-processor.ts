@@ -1,7 +1,7 @@
+import type { DynamoDB, QueryInput, QueryCommandOutput } from "@aws-sdk/client-dynamodb";
 import { marshall } from "@aws-sdk/util-dynamodb";
 import type { IFusePagingResult } from "../type/types";
 import { LoggingService } from "../helpers/logging-service";
-import type { DynamoDB, QueryInput, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
 import { FuseUtil } from "../helpers/fuse-utils";
 
 export class DynamoQueryScanProcessor {
@@ -32,7 +32,6 @@ export class DynamoQueryScanProcessor {
     }
     const results = await this.__helperDynamoQueryScanProcessor<T>({
       dynamoDb,
-      operation: "query",
       evaluationLimit,
       params,
       pageSize,
@@ -45,7 +44,6 @@ export class DynamoQueryScanProcessor {
   }
 
   private __helperDynamoQueryScanProcessor<T>({
-    operation,
     evaluationLimit,
     params,
     pageSize,
@@ -55,7 +53,6 @@ export class DynamoQueryScanProcessor {
     dynamoDb,
   }: {
     dynamoDb: () => DynamoDB;
-    operation: "query" | "scan";
     evaluationLimit?: number;
     params: QueryInput;
     pageSize?: number;
@@ -67,12 +64,11 @@ export class DynamoQueryScanProcessor {
     const xMinEvaluationLimit = 5;
     const xMaxEvaluationLimit = 500;
 
-    type IResult = QueryCommandOutput | ScanCommandOutput | undefined;
+    type IResult = QueryCommandOutput | undefined;
     // type IResult = QueryCommandOutput;
 
     LoggingService.log({
       processorParamsInit: {
-        operation,
         pageSize,
         orderDesc,
         lastKeyHash,
@@ -108,7 +104,7 @@ export class DynamoQueryScanProcessor {
         }
       }
 
-      const queryScanUntilDone = (err: any, data: IResult) => {
+      const queryScanUntilDone = (err: any, dataOutput: IResult) => {
         if (err) {
           LoggingService.log(err, err?.stack);
           if (returnedItems?.length) {
@@ -117,51 +113,44 @@ export class DynamoQueryScanProcessor {
             reject(err.stack);
           }
         } else {
-          if (data?.Items?.length) {
-            returnedItems = [...returnedItems, ...data.Items];
+          if (dataOutput?.Items?.length) {
+            returnedItems = [...returnedItems, ...dataOutput.Items];
           }
 
-          if (returnedItems.length && hashKeyAndSortKey?.length) {
-            const dataObj = returnedItems.slice(-1)[0];
-            const customLastEvaluationKey = this.__createCustomLastEvaluationKey(dataObj, hashKeyAndSortKey);
+          if (returnedItems?.length && hashKeyAndSortKey?.length) {
+            const itemObject = returnedItems.slice(-1)[0];
+            const customLastEvaluationKey = this.__createCustomLastEvaluationKey({
+              itemObject,
+              primaryFieldNames: hashKeyAndSortKey,
+            });
             LoggingService.log({ customLastEvaluationKey });
           }
 
           if (pageSize && returnedItems.length >= pageSize) {
-            const scanResult: IFusePagingResult<T[]> = {
+            const queryOutputResult: IFusePagingResult<T[]> = {
               mainResult: returnedItems,
             };
 
-            if (data?.LastEvaluatedKey && Object.keys(data.LastEvaluatedKey).length) {
-              const lastKeyHash = this.__encodeLastKey(data.LastEvaluatedKey);
-              scanResult.lastKeyHash = lastKeyHash;
+            if (dataOutput?.LastEvaluatedKey && Object.keys(dataOutput.LastEvaluatedKey).length) {
+              const lastKeyHash = this.__encodeLastKey(dataOutput.LastEvaluatedKey);
+              queryOutputResult.lastKeyHash = lastKeyHash;
             }
-            resolve(scanResult);
-          } else if (
-            //
-            data?.LastEvaluatedKey &&
-            Object.keys(data.LastEvaluatedKey).length
-          ) {
+            resolve(queryOutputResult);
+          } else if (dataOutput?.LastEvaluatedKey && Object.keys(dataOutput.LastEvaluatedKey).length) {
             //
             const _paramsDef = { ...params };
-            _paramsDef.ExclusiveStartKey = data.LastEvaluatedKey;
+            _paramsDef.ExclusiveStartKey = dataOutput.LastEvaluatedKey;
             if (_evaluationLimit) {
               _paramsDef.Limit = _evaluationLimit;
             }
+
             LoggingService.log({
-              operation,
               dynamoProcessorParams: _paramsDef,
             });
 
-            if (operation === "scan") {
-              dynamoDb().scan(_paramsDef, (err: any, resultData: any) => {
-                queryScanUntilDone(err, resultData);
-              });
-            } else {
-              dynamoDb().query(_paramsDef, (err, resultData) => {
-                queryScanUntilDone(err, resultData);
-              });
-            }
+            dynamoDb().query(_paramsDef, (err, resultData) => {
+              queryScanUntilDone(err, resultData);
+            });
           } else {
             resolve({ mainResult: returnedItems });
           }
@@ -178,19 +167,13 @@ export class DynamoQueryScanProcessor {
           _params.ExclusiveStartKey = _lastEvaluatedKey;
         }
       }
-      if (orderDesc === true && operation === "query") {
-        _params["ScanIndexForward"] = false;
+      if (orderDesc === true) {
+        _params.ScanIndexForward = false;
       }
-      LoggingService.log({ operation, dynamoProcessorParams: _params });
-      if (operation === "scan") {
-        dynamoDb().scan(params, (err: any, resultData: any) => {
-          queryScanUntilDone(err, resultData);
-        });
-      } else {
-        dynamoDb().query(params, (err, resultData) => {
-          queryScanUntilDone(err, resultData);
-        });
-      }
+      LoggingService.log({ dynamoProcessorParams: _params });
+      dynamoDb().query(params, (err, resultData) => {
+        queryScanUntilDone(err, resultData);
+      });
     });
   }
 
@@ -208,11 +191,17 @@ export class DynamoQueryScanProcessor {
     return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString("base64");
   }
 
-  private __createCustomLastEvaluationKey(dataObj: Record<string, any>, primaryFieldNames: string[]) {
-    const obj: any = {};
+  private __createCustomLastEvaluationKey({
+    itemObject,
+    primaryFieldNames,
+  }: {
+    itemObject: Record<string, any>;
+    primaryFieldNames: string[];
+  }) {
+    const obj: Record<string, any> = {};
     primaryFieldNames.forEach((key) => {
-      if (typeof dataObj[key] !== "undefined") {
-        obj[key] = dataObj[key];
+      if (typeof itemObject[key] !== "undefined") {
+        obj[key] = itemObject[key];
       }
     });
     return Object.keys(obj).length > 0 ? obj : null;
