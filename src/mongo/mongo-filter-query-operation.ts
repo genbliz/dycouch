@@ -1,5 +1,6 @@
 import { LoggingService } from "./../helpers/logging-service";
 import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
+import { QueryValidatorCheck } from "../helpers/query-validator";
 // https://docs.mongodb.com/drivers/node/fundamentals/crud/
 
 interface ISelectedQueryConditionsKeys {
@@ -130,22 +131,20 @@ export class MongoFilterQueryOperation {
         const _conditionKey01 = conditionKey as keyof IFuseKeyConditionParams;
 
         if (_conditionKey01 === "$beginsWith") {
-          if (conditionValue && typeof conditionValue === "string") {
-            const _queryConditions = this.operation__filterBeginsWith({
-              fieldName: fieldName,
-              term: conditionValue,
-            });
-            mConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.beginWith(_conditionKey01);
+          const _queryConditions = this.operation__filterBeginsWith({
+            fieldName: fieldName,
+            term: conditionValue,
+          });
+          mConditions.push(_queryConditions);
         } else if (_conditionKey01 === "$between") {
-          if (conditionValue && Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterBetween({
-              fieldName: fieldName,
-              from: conditionValue[0],
-              to: conditionValue[1],
-            });
-            mConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.between(_conditionKey01);
+          const _queryConditions = this.operation__filterBetween({
+            fieldName: fieldName,
+            from: conditionValue[0],
+            to: conditionValue[1],
+          });
+          mConditions.push(_queryConditions);
         } else {
           const conditionExpr: string = keyConditionMap[conditionKey];
           if (conditionExpr) {
@@ -156,7 +155,7 @@ export class MongoFilterQueryOperation {
             });
             mConditions.push(_queryConditions);
           } else {
-            // TODO throw an error
+            QueryValidatorCheck.throwQueryNotFound(conditionKey);
           }
         }
       }
@@ -223,71 +222,65 @@ export class MongoFilterQueryOperation {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
       if (conditionValue !== undefined) {
         if (conditionKey === "$between") {
-          if (conditionValue && Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterBetween({
-              fieldName: fieldName,
-              from: conditionValue[0],
-              to: conditionValue[1],
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.between(conditionValue);
+          const _queryConditions = this.operation__filterBetween({
+            fieldName: fieldName,
+            from: conditionValue[0],
+            to: conditionValue[1],
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$beginsWith") {
-          if (conditionValue && typeof conditionValue === "string") {
-            const _queryConditions = this.operation__filterBeginsWith({
-              fieldName: fieldName,
-              term: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.beginWith(conditionValue);
+          const _queryConditions = this.operation__filterBeginsWith({
+            fieldName: fieldName,
+            term: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$contains") {
-          if (conditionValue && typeof conditionValue === "string") {
-            const _queryConditions = this.operation__filterContains({
-              fieldName: fieldName,
-              term: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.contains(conditionValue);
+          const _queryConditions = this.operation__filterContains({
+            fieldName: fieldName,
+            term: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$notContains") {
-          if (typeof conditionValue === "string") {
-            const _queryConditions = this.operation__filterNotContains({
-              fieldName: fieldName,
-              term: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.notContains(conditionValue);
+          const _queryConditions = this.operation__filterNotContains({
+            fieldName: fieldName,
+            term: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$in") {
-          if (conditionValue && Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterIn({
-              fieldName: fieldName,
-              attrValues: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.in_query(conditionValue);
+          const _queryConditions = this.operation__filterIn({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$nin") {
-          if (conditionValue && Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterNotIn({
-              fieldName: fieldName,
-              attrValues: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.notIn(conditionValue);
+          const _queryConditions = this.operation__filterNotIn({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$not") {
-          if (conditionValue && typeof conditionValue === "object") {
-            const _queryConditions = this.operation__filterNot({
-              fieldName: fieldName,
-              selectorObjValues: conditionValue,
-            });
-            if (_queryConditions) {
-              queryConditions.push(_queryConditions);
-            }
+          QueryValidatorCheck.not_query(conditionValue);
+          const _queryConditions = this.operation__filterNot({
+            fieldName: fieldName,
+            selectorObjValues: conditionValue,
+          });
+          if (_queryConditions) {
+            queryConditions.push(_queryConditions);
           }
         } else if (conditionKey === "$exists") {
-          if (conditionValue === "true" || conditionValue === true) {
+          QueryValidatorCheck.exists(conditionValue);
+          if (String(conditionValue) === "true") {
             const _queryConditions = this.operation__filterFieldExist({
               fieldName: fieldName,
             });
             queryConditions.push(_queryConditions);
-          } else if (conditionValue === "false" || conditionValue === false) {
+          } else if (String(conditionValue) === "false") {
             const _queryConditions = this.operation__filterFieldNotExist({
               fieldName: fieldName,
             });
@@ -303,7 +296,7 @@ export class MongoFilterQueryOperation {
             });
             queryConditions.push(_queryConditions);
           } else {
-            // TODO throw an error
+            QueryValidatorCheck.throwQueryNotFound(conditionKey);
           }
         }
       }
@@ -329,6 +322,7 @@ export class MongoFilterQueryOperation {
       if (fieldName_Or_And === "$or") {
         const orKey = fieldName_Or_And;
         const orArray: IQueryConditions[] = queryDefs[orKey];
+        QueryValidatorCheck.exists(orArray);
         if (orArray && Array.isArray(orArray)) {
           orArray.forEach((orQuery) => {
             Object.keys(orQuery).forEach((fieldName) => {
@@ -356,6 +350,7 @@ export class MongoFilterQueryOperation {
       } else if (fieldName_Or_And === "$and") {
         const andKey = fieldName_Or_And;
         const andArray: IQueryConditions[] = queryDefs[andKey];
+        QueryValidatorCheck.exists(andArray);
         if (andArray && Array.isArray(andArray)) {
           andArray.forEach((andQuery) => {
             Object.keys(andQuery).forEach((fieldName) => {

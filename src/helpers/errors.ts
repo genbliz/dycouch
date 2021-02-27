@@ -33,3 +33,5 @@ export class FuseErrorUtils {
     }
   }
 }
+
+export const FuseErrorUtilsService = new FuseErrorUtils();

@@ -1,3 +1,4 @@
+import { QueryValidatorCheck } from "src/helpers/query-validator";
 import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 // https://docs.couchdb.org/en/latest/api/database/find.html
 
@@ -129,20 +130,20 @@ export class CouchFilterQueryOperation {
         const _conditionKey01 = conditionKey as keyof IFuseKeyConditionParams;
 
         if (_conditionKey01 === "$beginsWith") {
+          QueryValidatorCheck.beginWith(conditionValue);
           const _queryConditions = this.operation__filterBeginsWith({
             fieldName: fieldName,
             term: conditionValue,
           });
           mConditions.push(_queryConditions);
         } else if (_conditionKey01 === "$between") {
-          if (Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterBetween({
-              fieldName: fieldName,
-              from: conditionValue[0],
-              to: conditionValue[1],
-            });
-            mConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.between(conditionValue);
+          const _queryConditions = this.operation__filterBetween({
+            fieldName: fieldName,
+            from: conditionValue[0],
+            to: conditionValue[1],
+          });
+          mConditions.push(_queryConditions);
         } else {
           const conditionExpr: string = keyConditionMap[conditionKey];
           if (conditionExpr) {
@@ -153,7 +154,7 @@ export class CouchFilterQueryOperation {
             });
             mConditions.push(_queryConditions);
           } else {
-            //
+            QueryValidatorCheck.throwQueryNotFound(conditionKey);
           }
         }
       }
@@ -220,45 +221,50 @@ export class CouchFilterQueryOperation {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
       if (conditionValue !== undefined) {
         if (conditionKey === "$between") {
-          if (Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterBetween({
-              fieldName: fieldName,
-              from: conditionValue[0],
-              to: conditionValue[1],
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.between(conditionValue);
+          const _queryConditions = this.operation__filterBetween({
+            fieldName: fieldName,
+            from: conditionValue[0],
+            to: conditionValue[1],
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$beginsWith") {
+          QueryValidatorCheck.beginWith(conditionValue);
           const _queryConditions = this.operation__filterBeginsWith({
             fieldName: fieldName,
             term: conditionValue,
           });
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$contains") {
-          if (typeof conditionValue === "string") {
-            const _queryConditions = this.operation__filterContains({
-              fieldName: fieldName,
-              term: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.contains(conditionValue);
+          const _queryConditions = this.operation__filterContains({
+            fieldName: fieldName,
+            term: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
+        } else if (conditionKey === "$notContains") {
+          QueryValidatorCheck.notContains(conditionValue);
+          const _queryConditions = this.operation__filterNotContains({
+            fieldName: fieldName,
+            term: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$in") {
-          if (Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterIn({
-              fieldName: fieldName,
-              attrValues: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.in_query(conditionValue);
+          const _queryConditions = this.operation__filterIn({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$nin") {
-          if (Array.isArray(conditionValue)) {
-            const _queryConditions = this.operation__filterNotIn({
-              fieldName: fieldName,
-              attrValues: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
+          QueryValidatorCheck.notIn(conditionValue);
+          const _queryConditions = this.operation__filterNotIn({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
         } else if (conditionKey === "$not") {
+          QueryValidatorCheck.not_query(conditionValue);
           if (conditionValue && typeof conditionValue === "object") {
             const _queryConditions = this.operation__filterNot({
               fieldName: fieldName,
@@ -268,21 +274,14 @@ export class CouchFilterQueryOperation {
               queryConditions.push(_queryConditions);
             }
           }
-        } else if (conditionKey === "$notContains") {
-          if (typeof conditionValue === "string") {
-            const _queryConditions = this.operation__filterNotContains({
-              fieldName: fieldName,
-              term: conditionValue,
-            });
-            queryConditions.push(_queryConditions);
-          }
         } else if (conditionKey === "$exists") {
-          if (conditionValue === "true" || conditionValue === true) {
+          QueryValidatorCheck.exists(conditionValue);
+          if (String(conditionValue) === "true") {
             const _queryConditions = this.operation__filterFieldExist({
               fieldName: fieldName,
             });
             queryConditions.push(_queryConditions);
-          } else if (conditionValue === "false" || conditionValue === false) {
+          } else if (String(conditionValue) === "false") {
             const _queryConditions = this.operation__filterFieldNotExist({
               fieldName: fieldName,
             });
@@ -298,7 +297,7 @@ export class CouchFilterQueryOperation {
             });
             queryConditions.push(_queryConditions);
           } else {
-            //
+            QueryValidatorCheck.throwQueryNotFound(conditionKey);
           }
         }
       }
@@ -324,6 +323,7 @@ export class CouchFilterQueryOperation {
       if (fieldName_Or_And === "$or") {
         const orKey = fieldName_Or_And;
         const orArray: IQueryConditions[] = queryDefs[orKey];
+        QueryValidatorCheck.or_query(orArray);
         if (orArray && Array.isArray(orArray)) {
           orArray.forEach((orQuery) => {
             Object.keys(orQuery).forEach((fieldName) => {
@@ -351,6 +351,7 @@ export class CouchFilterQueryOperation {
       } else if (fieldName_Or_And === "$and") {
         const andKey = fieldName_Or_And;
         const andArray: IQueryConditions[] = queryDefs[andKey];
+        QueryValidatorCheck.and_query(andArray);
         if (andArray && Array.isArray(andArray)) {
           andArray.forEach((andQuery) => {
             Object.keys(andQuery).forEach((fieldName) => {
