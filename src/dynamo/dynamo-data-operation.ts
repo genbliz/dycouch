@@ -43,6 +43,8 @@ type IModelBase = IFuseCoreEntityModel;
 export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T> {
   private readonly _fuse_partitionKeyFieldName: keyof Pick<IModelBase, "id"> = "id";
   private readonly _fuse_sortKeyFieldName: keyof Pick<IModelBase, "featureEntity"> = "featureEntity";
+  private readonly _fuse_featureEntity_Key_Value: { featureEntity: string };
+
   //
   private readonly _fuse_dynamoDb: () => FuseInitializerDynamo;
   private readonly _fuse_dataKeyGenerator: () => string;
@@ -77,6 +79,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     this._fuse_queryFilter = new DynamoFilterQueryOperation();
     this._fuse_queryScanProcessor = new DynamoQueryScanProcessor();
     this._fuse_errorHelper = new FuseErrorUtils();
+    this._fuse_featureEntity_Key_Value = { featureEntity: featureEntityValue };
   }
 
   fuse_tableManager() {
@@ -446,7 +449,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       batchIds.push(ids);
     }
 
-    LoggingService.log("@allBatchGetManyByIdsBase batchIds: ", batchIds.length);
+    LoggingService.log("@fuse_getManyByIds batchIds: ", batchIds.length);
 
     let result: T[] = [];
 
@@ -460,7 +463,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       });
       result = [...result, ...call];
     }
-    LoggingService.log("@allBatchGetManyByIdsBase batchIds result Out", result.length);
+    LoggingService.log("@fuse_getManyByIds batchIds result Out: ", result.length);
     return result;
   }
 
@@ -579,7 +582,6 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
               RequestItems: data.UnprocessedKeys,
             };
             LoggingService.log({ dynamoBatchGetParams: _params });
-            // this._dynamoDb().batchGetItem(_params, batchGetUntilDone);
 
             this._fuse_dynamoDbInstance().batchGetItem(params, (err, resultData) => {
               batchGetUntilDone(err, resultData);
@@ -589,7 +591,6 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
           }
         }
       };
-      // this._dynamoDb().batchGetItem(params, batchGetUntilDone);
       this._fuse_dynamoDbInstance().batchGetItem(params, (err, resultData) => {
         batchGetUntilDone(err, resultData);
       });
@@ -627,17 +628,28 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       throw this._fuse_createGenericError("Secondary index not named/defined");
     }
 
-    const partitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
-    const sortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
+    const index_PartitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
+    const index_SortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
-          ...{ [sortKeyFieldName]: paramOption.sortKeyQuery },
-          ...{ [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+          ...{ [index_SortKeyFieldName]: paramOption.sortKeyQuery },
+          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
         }
-      : { [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
 
     const fieldKeys = paramOption.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields) : undefined;
+
+    const hasFeatureEntity = [index_PartitionKeyFieldName, index_SortKeyFieldName].includes(
+      this._fuse_sortKeyFieldName,
+    );
+
+    if (!hasFeatureEntity) {
+      paramOption.query = {
+        ...paramOption.query,
+        ...this._fuse_featureEntity_Key_Value,
+      } as any;
+    }
 
     const mainFilter = this._fuse_queryFilter.processQueryFilter({
       queryDefs: partitionSortKeyQuery,
@@ -687,7 +699,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       params.ProjectionExpression = mainFilter.projectionExpressionAttr;
     }
 
-    const hashKeyAndSortKey: [string, string] = [partitionKeyFieldName, sortKeyFieldName];
+    const hashKeyAndSortKey: [string, string] = [index_PartitionKeyFieldName, index_SortKeyFieldName];
 
     const result = await this._fuse_queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
       dynamoDb: () => this._fuse_dynamoDbInstance(),

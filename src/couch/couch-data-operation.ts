@@ -387,33 +387,31 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       throw this._fuse_createGenericError("Secondary index not named/defined");
     }
 
-    const partitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
-    const sortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
+    const index_partitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
+    const index_sortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
-          ...{ [sortKeyFieldName]: paramOption.sortKeyQuery },
-          ...{ [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+          ...{ [index_sortKeyFieldName]: paramOption.sortKeyQuery },
+          ...{ [index_partitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
         }
-      : { [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+      : { [index_partitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
 
     const queryDefs = {
       ...paramOption.query,
       ...partitionSortKeyQuery,
     };
 
-    const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({
-      queryDefs,
-    });
+    const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({ queryDefs });
 
     const query01: any = {};
     const query02: any = {};
     const query03: any = {};
 
     Object.entries(queryDefData).forEach(([key, val]) => {
-      if (key === partitionKeyFieldName) {
+      if (key === index_partitionKeyFieldName) {
         query01[key] = val;
-      } else if (key === sortKeyFieldName) {
+      } else if (key === index_sortKeyFieldName) {
         query02[key] = val;
       } else {
         query03[key] = val;
@@ -424,11 +422,11 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const sort01: Array<{ [propName: string]: "asc" | "desc" }> = [];
 
     if (paramOption?.pagingParams?.orderDesc) {
-      sort01.push({ [partitionKeyFieldName]: "desc" });
-      sort01.push({ [sortKeyFieldName]: "desc" });
+      sort01.push({ [index_partitionKeyFieldName]: "desc" });
+      sort01.push({ [index_sortKeyFieldName]: "desc" });
     } else {
-      sort01.push({ [partitionKeyFieldName]: "asc" });
-      sort01.push({ [sortKeyFieldName]: "asc" });
+      sort01.push({ [index_partitionKeyFieldName]: "asc" });
+      sort01.push({ [index_sortKeyFieldName]: "asc" });
     }
 
     LoggingService.log({
