@@ -640,15 +640,23 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
 
     const fieldKeys = paramOption.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields) : undefined;
 
-    const hasFeatureEntity = [index_PartitionKeyFieldName, index_SortKeyFieldName].includes(
-      this._fuse_sortKeyFieldName,
-    );
+    const localVariables = this._fuse_getLocalVariables();
 
+    /** Avoid query data leak */
+    const hasFeatureEntity = [
+      //
+      index_PartitionKeyFieldName,
+      index_SortKeyFieldName,
+    ].includes(localVariables.sortKeyFieldName);
     if (!hasFeatureEntity) {
       paramOption.query = {
         ...paramOption.query,
         ...this._fuse_featureEntity_Key_Value,
       } as any;
+    } else if (index_PartitionKeyFieldName !== localVariables.sortKeyFieldName) {
+      if (localVariables.sortKeyFieldName === index_SortKeyFieldName) {
+        partitionSortKeyQuery[index_SortKeyFieldName] = { $eq: localVariables.featureEntityValue as any };
+      }
     }
 
     const mainFilter = this._fuse_queryFilter.processQueryFilter({
