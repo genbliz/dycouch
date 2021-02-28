@@ -199,7 +199,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   async fuse_createOne({ data }: { data: T }): Promise<T> {
     this._fuse_checkValidateStrictRequiredFields(data);
 
-    const { partitionKeyFieldName } = this._fuse_getLocalVariables();
+    const { partitionKeyFieldName, featureEntityValue } = this._fuse_getLocalVariables();
 
     let dataId: string | undefined = data[partitionKeyFieldName];
 
@@ -213,6 +213,10 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const dataMust = this._fuse_getBaseObject({ dataId });
     const fullData = { ...data, ...dataMust };
+
+    if (fullData.featureEntity !== featureEntityValue) {
+      throw this._fuse_createGenericError("FeatureEntity mismatched");
+    }
 
     const validated = await this._fuse_allHelpValidateGetValue(fullData);
 
@@ -387,15 +391,33 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       throw this._fuse_createGenericError("Secondary index not named/defined");
     }
 
-    const index_partitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
-    const index_sortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
+    const index_PartitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
+    const index_SortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
-          ...{ [index_sortKeyFieldName]: paramOption.sortKeyQuery },
-          ...{ [index_partitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+          ...{ [index_SortKeyFieldName]: paramOption.sortKeyQuery },
+          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
         }
-      : { [index_partitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+
+    const localVariables = this._fuse_getLocalVariables();
+    /** Avoid query data leak */
+    const hasFeatureEntity = [
+      //
+      index_PartitionKeyFieldName,
+      index_SortKeyFieldName,
+    ].includes(localVariables.sortKeyFieldName);
+    if (!hasFeatureEntity) {
+      paramOption.query = {
+        ...paramOption.query,
+        ...{ [localVariables.sortKeyFieldName]: localVariables.featureEntityValue },
+      } as any;
+    } else if (index_PartitionKeyFieldName !== localVariables.sortKeyFieldName) {
+      if (localVariables.sortKeyFieldName === index_SortKeyFieldName) {
+        partitionSortKeyQuery[index_SortKeyFieldName] = { $eq: localVariables.featureEntityValue as any };
+      }
+    }
 
     const queryDefs = {
       ...paramOption.query,
@@ -409,9 +431,9 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const query03: any = {};
 
     Object.entries(queryDefData).forEach(([key, val]) => {
-      if (key === index_partitionKeyFieldName) {
+      if (key === index_PartitionKeyFieldName) {
         query01[key] = val;
-      } else if (key === index_sortKeyFieldName) {
+      } else if (key === index_SortKeyFieldName) {
         query02[key] = val;
       } else {
         query03[key] = val;
@@ -422,11 +444,11 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const sort01: Array<{ [propName: string]: "asc" | "desc" }> = [];
 
     if (paramOption?.pagingParams?.orderDesc) {
-      sort01.push({ [index_partitionKeyFieldName]: "desc" });
-      sort01.push({ [index_sortKeyFieldName]: "desc" });
+      sort01.push({ [index_PartitionKeyFieldName]: "desc" });
+      sort01.push({ [index_SortKeyFieldName]: "desc" });
     } else {
-      sort01.push({ [index_partitionKeyFieldName]: "asc" });
-      sort01.push({ [index_sortKeyFieldName]: "asc" });
+      sort01.push({ [index_PartitionKeyFieldName]: "asc" });
+      sort01.push({ [index_SortKeyFieldName]: "asc" });
     }
 
     LoggingService.log({

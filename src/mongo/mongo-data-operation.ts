@@ -245,7 +245,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   async fuse_createOne({ data }: { data: T }): Promise<T> {
     this._fuse_checkValidateStrictRequiredFields(data);
 
-    const { partitionKeyFieldName } = this._fuse_getLocalVariables();
+    const { partitionKeyFieldName, featureEntityValue } = this._fuse_getLocalVariables();
 
     let dataId: string | undefined = data[partitionKeyFieldName];
 
@@ -259,6 +259,10 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const dataMust = this._fuse_getBaseObject({ dataId });
     const fullData = { ...data, ...dataMust };
+
+    if (fullData.featureEntity !== featureEntityValue) {
+      throw this._fuse_createGenericError("FeatureEntity mismatched");
+    }
 
     const validated = await this._fuse_allHelpValidateGetValue(fullData);
 
@@ -294,6 +298,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     if (!(dataInDb?.id === dataId && dataInDb.featureEntity === this._fuse_featureEntityValue)) {
       throw this._fuse_createGenericError("Record does not exists");
     }
+
     const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
     if (!passed) {
       throw this._fuse_createGenericError("Record with conditions does not exists");
@@ -349,15 +354,33 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       throw this._fuse_createGenericError("Secondary index not named/defined");
     }
 
-    const partitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
-    const sortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
+    const index_PartitionKeyFieldName = secondaryIndex.partitionKeyFieldName as string;
+    const index_SortKeyFieldName = secondaryIndex.sortKeyFieldName as string;
 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
-          ...{ [sortKeyFieldName]: paramOption.sortKeyQuery },
-          ...{ [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+          ...{ [index_SortKeyFieldName]: paramOption.sortKeyQuery },
+          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
         }
-      : { [partitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+
+    const localVariables = this._fuse_getLocalVariables();
+    /** Avoid query data leak */
+    const hasFeatureEntity = [
+      //
+      index_PartitionKeyFieldName,
+      index_SortKeyFieldName,
+    ].includes(localVariables.sortKeyFieldName);
+    if (!hasFeatureEntity) {
+      paramOption.query = {
+        ...paramOption.query,
+        ...{ [localVariables.sortKeyFieldName]: localVariables.featureEntityValue },
+      } as any;
+    } else if (index_PartitionKeyFieldName !== localVariables.sortKeyFieldName) {
+      if (localVariables.sortKeyFieldName === index_SortKeyFieldName) {
+        partitionSortKeyQuery[index_SortKeyFieldName] = { $eq: localVariables.featureEntityValue as any };
+      }
+    }
 
     const queryDefs = {
       ...paramOption.query,
@@ -373,11 +396,11 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const sort01: Array<[string, number]> = [];
 
     if (paramOption?.pagingParams?.orderDesc) {
-      sort01.push([partitionKeyFieldName, -1]);
-      sort01.push([sortKeyFieldName, -1]);
+      sort01.push([index_PartitionKeyFieldName, -1]);
+      sort01.push([index_SortKeyFieldName, -1]);
     } else {
-      sort01.push([partitionKeyFieldName, 1]);
-      sort01.push([sortKeyFieldName, 1]);
+      sort01.push([index_PartitionKeyFieldName, 1]);
+      sort01.push([index_SortKeyFieldName, 1]);
     }
 
     const results = await db

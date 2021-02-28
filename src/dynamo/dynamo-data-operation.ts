@@ -184,7 +184,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
   async fuse_createOne({ data }: { data: T }) {
     this._fuse_checkValidateStrictRequiredFields(data);
 
-    const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
+    const { tableFullName, partitionKeyFieldName, featureEntityValue } = this._fuse_getLocalVariables();
 
     let dataId: string | undefined = data[partitionKeyFieldName];
 
@@ -198,6 +198,10 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
 
     const dataMust = this._fuse_getBaseObject({ dataId });
     const fullData = { ...data, ...dataMust };
+
+    if (fullData.featureEntity !== featureEntityValue) {
+      throw this._fuse_createGenericError("FeatureEntity mismatched");
+    }
 
     const { validatedData, marshalled } = await this._fuse_allHelpValidateMarshallAndGetValue(fullData);
 
