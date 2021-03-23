@@ -278,13 +278,13 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return final;
   }
 
-  async fuse_updateOneById({
+  async fuse_updateOne({
     dataId,
-    data,
+    updateData,
     withCondition,
   }: {
     dataId: string;
-    data: T;
+    updateData: T;
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T> {
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
@@ -303,9 +303,9 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     if (!passed) {
       throw this._fuse_createGenericError("Record with conditions does not exists");
     }
-    const _data: IFullEntity<T> = { ...dataInDb, ...data } as any;
+    const data: IFullEntity<T> = { ...dataInDb, ...updateData } as any;
 
-    const validated = await this._fuse_allHelpValidateGetValue(_data);
+    const validated = await this._fuse_allHelpValidateGetValue(data);
 
     const result = await db.replaceOne(query, validated.validatedData);
     if (!result.modifiedCount) {
@@ -314,12 +314,6 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const final = { ...validated.validatedData };
     delete final._id;
     return final;
-  }
-
-  fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
-    const dataInput: IFullEntity<T> = data as any;
-    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId: dataInput.id });
-    return this.fuse_updateOneById({ data, dataId: dataInput.id });
   }
 
   async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(

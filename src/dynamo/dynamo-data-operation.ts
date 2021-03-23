@@ -254,45 +254,16 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     return item;
   }
 
-  async fuse_updateOneDirect({ data }: { data: T }) {
-    this._fuse_checkValidateStrictRequiredFields(data);
-
-    const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
-
-    const dataId: string | undefined = data[partitionKeyFieldName];
-
-    if (!dataId) {
-      throw this._fuse_createGenericError("Update data requires sort key field value");
-    }
-
-    const dataMust = this._fuse_getBaseObject({ dataId });
-
-    const fullData = { ...data, ...dataMust };
-    //
-    const { validatedData, marshalled } = await this._fuse_allHelpValidateMarshallAndGetValue(fullData);
-
-    LoggingService.log({ marshalled });
-
-    const params: PutItemInput = {
-      TableName: tableFullName,
-      Item: marshalled,
-    };
-
-    await this._fuse_dynamoDbInstance().putItem(params);
-    const result: T = validatedData;
-    return result;
-  }
-
-  async fuse_updateOneById({
+  async fuse_updateOne({
     dataId,
-    data,
+    updateData,
     withCondition,
   }: {
     dataId: string;
-    data: T;
+    updateData: T;
     withCondition?: IFuseFieldCondition<T>;
   }) {
-    this._fuse_checkValidateStrictRequiredFields(data);
+    this._fuse_checkValidateStrictRequiredFields(updateData);
 
     const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
 
@@ -308,6 +279,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       withCondition,
       item: dataInDb,
     });
+
     if (!isPassed) {
       throw this._fuse_createGenericError("Update condition failed");
     }
@@ -316,7 +288,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       dataId: dataInDb[partitionKeyFieldName],
     });
 
-    const fullData = { ...dataInDb, ...data, ...dataMust };
+    const fullData = { ...dataInDb, ...updateData, ...dataMust };
 
     const { validatedData, marshalled } = await this._fuse_allHelpValidateMarshallAndGetValue(fullData);
 

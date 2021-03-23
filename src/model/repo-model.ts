@@ -21,17 +21,15 @@ export abstract class RepoModel<T> {
 
   protected abstract fuse_createOne({ data }: { data: T }): Promise<T>;
 
-  protected abstract fuse_updateOneById({
+  protected abstract fuse_updateOne({
     dataId,
-    data,
+    updateData,
     withCondition,
   }: {
     dataId: string;
-    data: T;
+    updateData: T;
     withCondition?: IFuseFieldCondition<T>;
   }): Promise<T>;
-
-  protected abstract fuse_updateOneDirect({ data }: { data: T }): Promise<T>;
 
   protected abstract fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,

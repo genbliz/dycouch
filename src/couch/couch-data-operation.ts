@@ -269,13 +269,13 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return this._fuse_stripNonRequiredOutputData({ dataObj: dataInDb });
   }
 
-  async fuse_updateOneById({
+  async fuse_updateOne({
     dataId,
-    data,
+    updateData,
     withCondition,
   }: {
     dataId: string;
-    data: T;
+    updateData: T;
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T> {
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
@@ -288,9 +288,9 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     }
     const passed = this._fuse_withConditionPassed({ item: dataInDb, withCondition });
     if (!passed) {
-      throw this._fuse_createGenericError("Record with conditions does not exists");
+      throw this._fuse_createGenericError("Update conditions NOT passed");
     }
-    const _data: IFullEntity<T> = { ...data } as any;
+    const _data: IFullEntity<T> = { ...updateData } as any;
 
     const validated = await this._fuse_allHelpValidateGetValue(_data);
 
@@ -304,12 +304,6 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     return this._fuse_stripNonRequiredOutputData({
       dataObj: validated.validatedData,
     });
-  }
-
-  fuse_updateOneDirect({ data }: { data: T }): Promise<T> {
-    const dataInput: IFullEntity<T> = data as any;
-    this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId: dataInput.id });
-    return this.fuse_updateOneById({ data, dataId: dataInput.id });
   }
 
   async fuse_getManyByIds({

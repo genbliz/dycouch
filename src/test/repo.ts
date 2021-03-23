@@ -67,9 +67,9 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
   }
 
   async create() {
-    await this.fuse_updateOneById({
+    await this.fuse_updateOne({
       dataId: "",
-      data: {
+      updateData: {
         amount: getRandom(),
         category: getRandom().toString(),
         invoiceId: getRandom().toString(),
