@@ -109,11 +109,11 @@ export class MongoFilterQueryOperation {
     attrValues,
   }: {
     fieldName: string;
-    attrValues: any[];
+    attrValues: { $in: any[] };
   }): IQueryConditions {
     const result = {
       [fieldName]: {
-        $elemMatch: { $in: attrValues },
+        $elemMatch: attrValues,
       },
     } as IQueryConditions;
     return result;

@@ -134,7 +134,6 @@ export class DynamoFilterQueryOperation {
     attrValues: { $in: any[] };
   }): IQueryConditions[] {
     const result: IQueryConditions[] = [];
-
     attrValues.$in.forEach((term) => {
       const query01 = this.operation__filterContains({ term, fieldName });
       result.push(query01);

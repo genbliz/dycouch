@@ -47,8 +47,10 @@ class QueryValidatorCheckBase {
     if (!(conditionValue && typeof conditionValue === "object")) {
       this.queryErrorThrowChecks({ conditionValue, queryType: "$elemMatch" });
     }
-    if (!conditionValue?.$in?.length) {
-      throw FuseErrorUtilsService.fuse_helper_createFriendlyError("$elemMatch must have a valid $in query");
+    if (!(Array.isArray(conditionValue.$in) && conditionValue.$in.length)) {
+      throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+        "$elemMatch must have a valid $in query and must be an array of non-zero length",
+      );
     }
 
     for (const item of conditionValue.$in) {
