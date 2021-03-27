@@ -28,14 +28,11 @@ https://medium.com/@nabtechblog/advanced-design-patterns-for-amazon-dynamodb-c31
 https://medium.com/@nabtechblog/advanced-design-patterns-for-amazon-dynamodb-354f97c96c2
 
 
+https://www.bmc.com/blogs/dynamodb-advanced-queries
 
+https://docs.amazonaws.cn/en_us/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html
 
+https://partiql.org/tutorial.html#querying-nested-data
 
-
-
-
-
-
-
-
+https://github.com/dabit3/dynamodb-documentclient-cheat-sheet
 
