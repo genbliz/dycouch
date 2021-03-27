@@ -24,6 +24,7 @@ const conditionMapPre: FieldPartial<Omit<IFuseQueryConditionParams, keyof IFuseK
   $not: "",
   $contains: "",
   $notContains: "",
+  $elemMatch: "",
 };
 
 const conditionMap = { ...keyConditionMap, ...conditionMapPre };
@@ -122,6 +123,22 @@ export class DynamoFilterQueryOperation {
       },
       xFilterExpression: _filterExpressionValue,
     };
+    return result;
+  }
+
+  private operation__filterElemMatch({
+    fieldName,
+    attrValues,
+  }: {
+    fieldName: string;
+    attrValues: { $in: any[] };
+  }): IQueryConditions[] {
+    const result: IQueryConditions[] = [];
+
+    attrValues.$in.forEach((term) => {
+      const query01 = this.operation__filterContains({ term, fieldName });
+      result.push(query01);
+    });
     return result;
   }
 
@@ -239,6 +256,7 @@ export class DynamoFilterQueryOperation {
   }) {
     const queryConditions: IQueryConditions[] = [];
     const notConditions: IQueryConditions[] = [];
+    const orConditions: IQueryConditions[] = [];
     Object.entries(queryObject).forEach(([condKey, conditionValue]) => {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
       LoggingService.log({ conditionValue });
@@ -281,6 +299,17 @@ export class DynamoFilterQueryOperation {
           });
           _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
           queryConditions.push(_queryConditions);
+        } else if (conditionKey === "$elemMatch") {
+          QueryValidatorCheck.elemMatch(conditionValue);
+          const elemMatchConditions = this.operation__filterElemMatch({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          if (elemMatchConditions?.length) {
+            for (const _queryCondition of elemMatchConditions) {
+              orConditions.push(_queryCondition);
+            }
+          }
         } else if (conditionKey === "$not") {
           QueryValidatorCheck.not_query(conditionValue);
           const _queryConditions = this.operation__filterNot({
@@ -329,7 +358,7 @@ export class DynamoFilterQueryOperation {
       }
     });
     LoggingService.log(queryConditions);
-    return { queryConditions, notConditions };
+    return { queryConditions, notConditions, orConditions };
   }
 
   private operation_translateBasicQueryOperation({ fieldName, queryObject }: { fieldName: string; queryObject: any }) {
@@ -406,6 +435,7 @@ export class DynamoFilterQueryOperation {
                   });
                   AND_queryConditions = [...AND_queryConditions, ..._andQueryCond.queryConditions];
                   NOT_queryConditions = [...NOT_queryConditions, ..._andQueryCond.notConditions];
+                  OR_queryConditions = [...OR_queryConditions, ..._andQueryCond.orConditions];
                 } else {
                   const _andQueryConditions = this.operation_translateBasicQueryOperation({
                     fieldName,
@@ -430,6 +460,7 @@ export class DynamoFilterQueryOperation {
               });
               AND_queryConditions = [...AND_queryConditions, ..._queryCond.queryConditions];
               NOT_queryConditions = [...NOT_queryConditions, ..._queryCond.notConditions];
+              OR_queryConditions = [...OR_queryConditions, ..._queryCond.orConditions];
             } else {
               const _queryConditions = this.operation_translateBasicQueryOperation({
                 fieldName: fieldName2,

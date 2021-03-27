@@ -14,6 +14,7 @@ interface ISelectedQueryConditionsKeys {
   $in?: any[];
   $nin?: any[];
   $regex?: string;
+  $elemMatch?: { $in: any[] };
 }
 
 type FieldPartial<T> = { [P in keyof T]-?: string };
@@ -36,6 +37,7 @@ const conditionMapPre: FieldPartial<Omit<IFuseQueryConditionParams, keyof IFuseK
   $not: "",
   $contains: "",
   $notContains: "",
+  $elemMatch: "",
 };
 
 const conditionMap = { ...keyConditionMap, ...conditionMapPre };
@@ -173,6 +175,21 @@ export class CouchFilterQueryOperation {
     return null;
   }
 
+  private operation__filterElementMatch({
+    fieldName,
+    attrValues,
+  }: {
+    fieldName: string;
+    attrValues: any[];
+  }): IQueryConditions {
+    const result = {
+      [fieldName]: {
+        $elemMatch: { $in: attrValues },
+      },
+    } as IQueryConditions;
+    return result;
+  }
+
   private operation__filterContains({ fieldName, term }: { fieldName: string; term: string }): IQueryConditions {
     const result = {
       [fieldName]: { $regex: `(?i)${term}` },
@@ -259,6 +276,13 @@ export class CouchFilterQueryOperation {
         } else if (conditionKey === "$nin") {
           QueryValidatorCheck.notIn(conditionValue);
           const _queryConditions = this.operation__filterNotIn({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
+        } else if (conditionKey === "$elemMatch") {
+          QueryValidatorCheck.elemMatch(conditionValue);
+          const _queryConditions = this.operation__filterElementMatch({
             fieldName: fieldName,
             attrValues: conditionValue,
           });

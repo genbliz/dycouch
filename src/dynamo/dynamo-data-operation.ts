@@ -260,19 +260,22 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     withCondition,
   }: {
     dataId: string;
-    updateData: T;
+    updateData: Partial<T>;
     withCondition?: IFuseFieldCondition<T>;
   }) {
     this._fuse_checkValidateStrictRequiredFields(updateData);
 
-    const { tableFullName, partitionKeyFieldName } = this._fuse_getLocalVariables();
+    const { tableFullName, partitionKeyFieldName, sortKeyFieldName } = this._fuse_getLocalVariables();
 
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ Update1DataId: dataId });
 
     const dataInDb = await this.fuse_getOneById({ dataId });
 
-    if (!(dataInDb && dataInDb[partitionKeyFieldName])) {
+    if (!dataInDb?.[partitionKeyFieldName]) {
       throw this._fuse_errorHelper.fuse_helper_createFriendlyError("Data does NOT exists");
+    }
+    if (dataInDb?.[sortKeyFieldName] !== this._fuse_featureEntityValue) {
+      throw this._fuse_createGenericError("Record does not exists");
     }
 
     const isPassed = this._fuse_withConditionPassed({
@@ -284,11 +287,13 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       throw this._fuse_createGenericError("Update condition failed");
     }
 
-    const dataMust = this._fuse_getBaseObject({
-      dataId: dataInDb[partitionKeyFieldName],
-    });
+    const dataMust = this._fuse_getBaseObject({ dataId });
 
-    const fullData = { ...dataInDb, ...updateData, ...dataMust };
+    const fullData = {
+      ...dataInDb,
+      ...updateData,
+      ...dataMust,
+    };
 
     const { validatedData, marshalled } = await this._fuse_allHelpValidateMarshallAndGetValue(fullData);
 

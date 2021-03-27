@@ -15,6 +15,7 @@ interface ISelectedQueryConditionsKeys {
   $in?: any[];
   $nin?: any[];
   $regex?: RegExp;
+  $elemMatch?: { $in: any[] };
 }
 
 type FieldPartial<T> = { [P in keyof T]-?: string };
@@ -37,6 +38,7 @@ const conditionMapPre: FieldPartial<Omit<IFuseQueryConditionParams, keyof IFuseK
   $not: "",
   $contains: "",
   $notContains: "",
+  $elemMatch: "",
 };
 
 const conditionMap = { ...keyConditionMap, ...conditionMapPre };
@@ -98,6 +100,21 @@ export class MongoFilterQueryOperation {
   private operation__filterIn({ fieldName, attrValues }: { fieldName: string; attrValues: any[] }): IQueryConditions {
     const result = {
       [fieldName]: { $in: attrValues },
+    } as IQueryConditions;
+    return result;
+  }
+
+  private operation__filterElementMatch({
+    fieldName,
+    attrValues,
+  }: {
+    fieldName: string;
+    attrValues: any[];
+  }): IQueryConditions {
+    const result = {
+      [fieldName]: {
+        $elemMatch: { $in: attrValues },
+      },
     } as IQueryConditions;
     return result;
   }
@@ -260,6 +277,13 @@ export class MongoFilterQueryOperation {
         } else if (conditionKey === "$nin") {
           QueryValidatorCheck.notIn(conditionValue);
           const _queryConditions = this.operation__filterNotIn({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          queryConditions.push(_queryConditions);
+        } else if (conditionKey === "$elemMatch") {
+          QueryValidatorCheck.elemMatch(conditionValue);
+          const _queryConditions = this.operation__filterElementMatch({
             fieldName: fieldName,
             attrValues: conditionValue,
           });

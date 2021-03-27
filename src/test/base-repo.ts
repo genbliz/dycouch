@@ -1,7 +1,7 @@
-import { FuseInitializerDynamo } from "./../dynamo/dynamo-initializer";
 import { DynamoDataOperation } from "./../dynamo/dynamo-data-operation";
 import type { IFuseIndexDefinition } from "../type/types";
 import Joi from "joi";
+import { MyDynamoConnection } from "./connection";
 
 interface IBaseRepoOptions<T> {
   schemaSubDef: Joi.SchemaMap;
@@ -12,8 +12,8 @@ interface IBaseRepoOptions<T> {
 export abstract class BaseRepository<T> extends DynamoDataOperation<T> {
   constructor({ schemaSubDef, secondaryIndexOptions, featureEntityValue }: IBaseRepoOptions<T>) {
     super({
-      dynamoDb: () => new FuseInitializerDynamo({ region: "" }),
-      baseTableName: "hospiman_table_db1",
+      dynamoDb: () => MyDynamoConnection.getDynamoConnection(),
+      baseTableName: "fuse_dynamo_test_table_01",
       schemaDef: { ...schemaSubDef },
       secondaryIndexOptions,
       featureEntityValue: featureEntityValue,

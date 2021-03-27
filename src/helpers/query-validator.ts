@@ -43,6 +43,23 @@ class QueryValidatorCheckBase {
     }
   }
 
+  elemMatch(conditionValue: { $in: any[] }) {
+    if (!(conditionValue && typeof conditionValue === "object")) {
+      this.queryErrorThrowChecks({ conditionValue, queryType: "$elemMatch" });
+    }
+    if (!conditionValue?.$in?.length) {
+      throw FuseErrorUtilsService.fuse_helper_createFriendlyError("$elemMatch must have a valid $in query");
+    }
+
+    for (const item of conditionValue.$in) {
+      if (typeof item !== "number" && typeof item !== "string" && typeof item !== "boolean") {
+        throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+          "$in in $elemMatch MUST have values of string or number or boolean",
+        );
+      }
+    }
+  }
+
   not_query(conditionValue: unknown) {
     if (!(conditionValue && typeof conditionValue === "object")) {
       this.queryErrorThrowChecks({ conditionValue, queryType: "$not" });

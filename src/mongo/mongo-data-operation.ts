@@ -73,7 +73,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     this._fuse_schema = Joi.object().keys({
       ...fullSchemaMapDef,
-      _id: Joi.string().required().min(5).max(1500),
+      _id: Joi.string().required().min(5).max(512),
     });
   }
 
@@ -111,7 +111,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     } as const;
   }
 
-  private _fuse_getNativePouchId(dataId: string) {
+  private _fuse_getNativeMongoId(dataId: string) {
     const { featureEntityValue } = this._fuse_getLocalVariables();
     return [featureEntityValue, dataId].join(":");
   }
@@ -120,7 +120,6 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const { partitionKeyFieldName, sortKeyFieldName, featureEntityValue } = this._fuse_getLocalVariables();
 
     const dataMust = {
-      _id: this._fuse_getNativePouchId(dataId),
       [partitionKeyFieldName]: dataId,
       [sortKeyFieldName]: featureEntityValue,
     };
@@ -207,7 +206,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const db = await this._fuse_getDbInstance();
 
-    const nativeId = this._fuse_getNativePouchId(dataId);
+    const nativeId = this._fuse_getNativeMongoId(dataId);
     const query: any = { _id: nativeId };
     const dataInDb = await db.findOne(query, { projection: { _id: 0 } });
 
@@ -231,7 +230,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T[]> {
     const uniqueIds = this._fuse_removeDuplicateString(dataIds);
-    const fullUniqueIds = uniqueIds.map((id) => this._fuse_getNativePouchId(id));
+    const fullUniqueIds = uniqueIds.map((id) => this._fuse_getNativeMongoId(id));
 
     const db = await this._fuse_getDbInstance();
 
@@ -258,7 +257,11 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     }
 
     const dataMust = this._fuse_getBaseObject({ dataId });
-    const fullData = { ...data, ...dataMust };
+    const fullData = {
+      ...data,
+      ...dataMust,
+      _id: this._fuse_getNativeMongoId(dataId),
+    };
 
     if (fullData.featureEntity !== featureEntityValue) {
       throw this._fuse_createGenericError("FeatureEntity mismatched");
@@ -284,12 +287,12 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     withCondition,
   }: {
     dataId: string;
-    updateData: T;
+    updateData: Partial<T>;
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T> {
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
 
-    const nativeId = this._fuse_getNativePouchId(dataId);
+    const nativeId = this._fuse_getNativeMongoId(dataId);
     const query: any = { _id: nativeId };
 
     const db = await this._fuse_getDbInstance();
@@ -303,7 +306,14 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     if (!passed) {
       throw this._fuse_createGenericError("Record with conditions does not exists");
     }
-    const data: IFullEntity<T> = { ...dataInDb, ...updateData } as any;
+
+    const dataMust = this._fuse_getBaseObject({ dataId });
+
+    const data: IFullEntity<T> = {
+      ...dataInDb,
+      ...updateData,
+      ...dataMust,
+    };
 
     const validated = await this._fuse_allHelpValidateGetValue(data);
 
@@ -421,7 +431,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const db = await this._fuse_getDbInstance();
 
-    const nativeId = this._fuse_getNativePouchId(dataId);
+    const nativeId = this._fuse_getNativeMongoId(dataId);
     const query: any = { _id: nativeId };
     const dataInDb = await db.findOne(query);
 

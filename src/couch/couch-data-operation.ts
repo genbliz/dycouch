@@ -1,3 +1,4 @@
+import { UtilService } from "./../helpers/util-service";
 import { LoggingService } from "./../helpers/logging-service";
 import type {
   IFuseFieldCondition,
@@ -73,7 +74,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     this._fuse_schema = Joi.object().keys({
       ...fullSchemaMapDef,
-      _id: Joi.string().required().min(5).max(1500),
+      _id: Joi.string().required().min(5).max(512),
     });
   }
 
@@ -111,10 +112,16 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     } as const;
   }
 
-  private _fuse_stripNonRequiredOutputData({ dataObj, excludeFields }: { dataObj: any; excludeFields?: string[] }): T {
+  private _fuse_stripNonRequiredOutputData({
+    dataObj,
+    excludeFields,
+  }: {
+    dataObj: Record<string, any>;
+    excludeFields?: string[];
+  }): T {
     const returnData = {} as any;
     if (typeof dataObj === "object" && this._fuse_entityResultFieldKeysMap.size > 0) {
-      Object.entries(dataObj).forEach(([key, value]) => {
+      Object.entries({ ...dataObj }).forEach(([key, value]) => {
         if (this._fuse_entityResultFieldKeysMap.has(key)) {
           if (excludeFields?.length) {
             if (!excludeFields.includes(key)) {
@@ -138,7 +145,6 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const { partitionKeyFieldName, sortKeyFieldName, featureEntityValue } = this._fuse_getLocalVariables();
 
     const dataMust = {
-      _id: this._fuse_getNativePouchId(dataId),
       [partitionKeyFieldName]: dataId,
       [sortKeyFieldName]: featureEntityValue,
     };
@@ -212,7 +218,11 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     }
 
     const dataMust = this._fuse_getBaseObject({ dataId });
-    const fullData = { ...data, ...dataMust };
+    const fullData = {
+      ...data,
+      ...dataMust,
+      _id: this._fuse_getNativePouchId(dataId),
+    };
 
     if (fullData.featureEntity !== featureEntityValue) {
       throw this._fuse_createGenericError("FeatureEntity mismatched");
@@ -275,7 +285,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     withCondition,
   }: {
     dataId: string;
-    updateData: T;
+    updateData: Partial<T>;
     withCondition?: IFuseFieldCondition<T> | undefined;
   }): Promise<T> {
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ dataId });
@@ -290,14 +300,26 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     if (!passed) {
       throw this._fuse_createGenericError("Update conditions NOT passed");
     }
-    const _data: IFullEntity<T> = { ...updateData } as any;
 
-    const validated = await this._fuse_allHelpValidateGetValue(_data);
+    const dataMust = this._fuse_getBaseObject({ dataId });
+
+    const dataInDbPlain = UtilService.convertObjectPlainObject(dataInDb);
+    const neededData = this._fuse_stripNonRequiredOutputData({ dataObj: dataInDbPlain });
+
+    const data: IFullEntity<T> = {
+      ...neededData,
+      ...updateData,
+      ...dataMust,
+      _id: dataInDb._id,
+    };
+
+    const validated = await this._fuse_allHelpValidateGetValue(data);
 
     const result = await this._fuse_couchDbInstance().insert({
       ...validated.validatedData,
       _rev: dataInDb._rev,
     });
+
     if (!result.ok) {
       throw this._fuse_createGenericError(this._fuse_operationNotSuccessful);
     }

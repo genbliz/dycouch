@@ -1,10 +1,13 @@
 import type { IFuseQueryDefinition } from "../type/types";
 import { BaseRepository } from "./base-repo";
 import Joi from "joi";
+import faker from "faker";
 
 export interface IPayment {
   amount: number;
   category: string;
+  skills: string[];
+  tenantId: string;
   invoiceId: string;
   transactionId?: string;
   remark: string;
@@ -12,14 +15,17 @@ export interface IPayment {
 
 // const query: IQueryDefinition<IPayment> = { amount: 0, category: "" };
 // if (query) {
-//   //
+//
 // }
 
 const _searchTerm = "";
 
+const tenantId = "c4a3bdd6-289b-cb23-09a7-915adad9ea4f";
+const definedSkills = ["JavaScript", "Node", "C#", "Mongo", "React", "Angular"];
+
 export const paramOptions: IFuseQueryDefinition<IPayment> = {
   $or: [
-    { category: { $contains: _searchTerm } },
+    // { category: { $contains: _searchTerm } },
     { invoiceId: { $contains: _searchTerm } },
     { transactionId: { $contains: _searchTerm } },
     { remark: { $contains: _searchTerm } },
@@ -28,6 +34,8 @@ export const paramOptions: IFuseQueryDefinition<IPayment> = {
 
 const schemaSubDef = {
   category: Joi.string().required(),
+  tenantId: Joi.string().required(),
+  skills: Joi.array().items(Joi.string()).required(),
   amount: Joi.number().min(1),
   invoiceId: Joi.string().empty("").default(null).allow(null),
   transactionId: Joi.string().empty("").default(null).allow(null),
@@ -42,36 +50,73 @@ const getRandom = () =>
     Math.round(Math.random() * 99),
   ].reduce((prev, cur) => prev + cur, 0);
 
+export const DefinedIndexes = {
+  featureEntity_tenantId: {
+    dataType: "S",
+    indexName: "featureEntity_tenantId_index",
+    partitionKeyFieldName: "featureEntity",
+    sortKeyFieldName: "tenantId",
+  },
+};
+
 class MyRepositoryBase extends BaseRepository<IPayment> {
+  private readonly featureEntityValue: string;
   constructor() {
     super({
       schemaSubDef,
-      secondaryIndexOptions: [],
-      featureEntityValue: "table_users",
+      secondaryIndexOptions: [DefinedIndexes.featureEntity_tenantId] as any[],
+      featureEntityValue: "payments",
     });
+    this.featureEntityValue = "payments";
   }
 
   async getIt() {
-    await this.fuse_getManyBySecondaryIndex({
-      indexName: "xyz",
+    return await this.fuse_getManyBySecondaryIndex({
+      indexName: DefinedIndexes.featureEntity_tenantId.indexName,
       partitionKeyQuery: {
-        equals: "",
+        equals: this.featureEntityValue,
       },
       query: {
-        category: { $gt: undefined },
-        // category: { $exists: true },
-        // amount: { $beginsWith: 0 },
+        // category: "42406",
+        skills: {
+          $elemMatch: {
+            $in: [{ dp: 90 }] as any,
+          },
+        },
+        // amount: { $gt: 80000 },
         // $or: [{ amount: { $not: { $beginsWith: "null" } } }],
       },
     });
   }
 
   async create() {
+    await this.fuse_createOne({
+      data: {
+        tenantId,
+        amount: getRandom(),
+        category: getRandom().toString(),
+        skills: Array.from(
+          new Set([
+            //
+            faker.helpers.randomize(definedSkills),
+            faker.helpers.randomize(definedSkills),
+            faker.helpers.randomize(definedSkills),
+            faker.helpers.randomize(definedSkills),
+          ]),
+        ),
+        remark: getRandom().toString(),
+        transactionId: getRandom().toString(),
+        invoiceId: getRandom().toString(),
+      },
+    });
+  }
+
+  async update() {
     await this.fuse_updateOne({
       dataId: "",
       updateData: {
         amount: getRandom(),
-        category: getRandom().toString(),
+        // category: getRandom().toString(),
         invoiceId: getRandom().toString(),
         remark: getRandom().toString(),
         transactionId: getRandom().toString(),
@@ -87,25 +132,3 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
 }
 
 export const MyRepository = new MyRepositoryBase();
-
-let count = 0;
-
-function runInserts() {
-  const tout = setInterval(() => {
-    count++;
-    console.log({ count });
-    if (count >= 10) {
-      clearInterval(tout);
-      process.exit(0);
-    } else {
-      MyRepository.create().catch((e) => console.log(e));
-    }
-  }, 2000);
-}
-
-setTimeout(() => {
-  console.log("Initializing");
-  runInserts();
-}, 10);
-
-// ts-node ./src/test/repo.ts

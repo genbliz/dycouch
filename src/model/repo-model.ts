@@ -27,7 +27,7 @@ export abstract class RepoModel<T> {
     withCondition,
   }: {
     dataId: string;
-    updateData: T;
+    updateData: Partial<T>;
     withCondition?: IFuseFieldCondition<T>;
   }): Promise<T>;
 
