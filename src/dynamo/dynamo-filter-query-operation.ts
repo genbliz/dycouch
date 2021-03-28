@@ -2,6 +2,7 @@ import { QueryValidatorCheck } from "./../helpers/query-validator";
 import { LoggingService } from "../helpers/logging-service";
 import { UtilService } from "../helpers/util-service";
 import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
+import { FuseErrorUtilsService } from "../helpers/errors";
 
 // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
 
@@ -141,6 +142,84 @@ export class DynamoFilterQueryOperation {
     return result;
   }
 
+  private operation__filterElemMatchObject({
+    fieldName,
+    attrValues,
+  }: {
+    fieldName: string;
+    attrValues: Record<string, Record<string, any>>; // { product: {$eq: "xyz"} }
+  }): IQueryConditions[] {
+    const results: IQueryConditions[] = [];
+    Object.entries(attrValues).forEach(([subFieldName, queryval]) => {
+      if (queryval && typeof queryval === "object") {
+        Object.entries(queryval).forEach(([condKey, val]) => {
+          //
+          const conditionKey = condKey as keyof IFuseKeyConditionParams;
+          //
+          if (!Object.keys(keyConditionMap).includes(conditionKey)) {
+            throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+              `Invalid query key: ${conditionKey} @ ElemMatchObject`,
+            );
+          }
+          const conditionExpr = keyConditionMap[conditionKey];
+          //
+          const attrValue = `:attr${getRandom()}`.toLowerCase();
+          const attrKeyHash = `#attrKey${subFieldName}${getRandom()}`.toLowerCase();
+          const parentFieldName = `#attrKey${fieldName}${getRandom()}`.toLowerCase();
+          //
+          if (conditionExpr) {
+            const result: IQueryConditions = {
+              xExpressionAttributeValues: {
+                [attrValue]: val,
+              },
+              xExpressionAttributeNames: {
+                [attrKeyHash]: subFieldName,
+                [parentFieldName]: fieldName,
+              },
+              xFilterExpression: [`${parentFieldName}.${attrKeyHash}`, conditionExpr, attrValue].join(" "),
+            };
+            results.push(result);
+          } else {
+            if (conditionKey === "$between") {
+              const fromKey = `:fromKey0${getRandom()}`.toLowerCase();
+              const toKey = `:toKey0${getRandom()}`.toLowerCase();
+              const [from, to] = val;
+              const result: IQueryConditions = {
+                xExpressionAttributeValues: {
+                  [fromKey]: from,
+                  [toKey]: to,
+                },
+                xExpressionAttributeNames: {
+                  [attrKeyHash]: subFieldName,
+                  [parentFieldName]: fieldName,
+                },
+                xFilterExpression: [`${parentFieldName}.${attrKeyHash}`, "between", fromKey, "and", toKey].join(" "),
+              };
+              results.push(result);
+            } else if (conditionKey === "$beginsWith") {
+              const result: IQueryConditions = {
+                xExpressionAttributeValues: {
+                  [attrValue]: val,
+                },
+                xExpressionAttributeNames: {
+                  [attrKeyHash]: subFieldName,
+                  [parentFieldName]: fieldName,
+                },
+                xFilterExpression: `begins_with (${parentFieldName}.${attrKeyHash}, ${attrValue})`,
+              };
+              results.push(result);
+            } else {
+              throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+                `Query key: ${conditionKey} not currently supported`,
+              );
+            }
+          }
+        });
+      }
+    });
+    return results;
+  }
+
   private operation__filterContains({ fieldName, term }: { fieldName: string; term: any }): IQueryConditions {
     const attrKeyHash = `#attrKey5${getRandom()}`.toLowerCase();
     const keyAttr = `:attr${fieldName}${getRandom()}`.toLowerCase();
@@ -256,9 +335,9 @@ export class DynamoFilterQueryOperation {
     const queryConditions: IQueryConditions[] = [];
     const notConditions: IQueryConditions[] = [];
     const orConditions: IQueryConditions[] = [];
+    //
     Object.entries(queryObject).forEach(([condKey, conditionValue]) => {
       const conditionKey = condKey as keyof IFuseQueryConditionParams;
-      LoggingService.log({ conditionValue });
       if (conditionValue !== undefined) {
         if (conditionKey === "$between") {
           QueryValidatorCheck.between(conditionValue);
@@ -299,14 +378,26 @@ export class DynamoFilterQueryOperation {
           _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$elemMatch") {
-          QueryValidatorCheck.elemMatch(conditionValue);
-          const elemMatchConditions = this.operation__filterElemMatch({
-            fieldName: fieldName,
-            attrValues: conditionValue,
-          });
-          if (elemMatchConditions?.length) {
-            for (const _queryCondition of elemMatchConditions) {
-              orConditions.push(_queryCondition);
+          const matchType = QueryValidatorCheck.elemMatch(conditionValue);
+          if (matchType === "in") {
+            const elemMatchConditions = this.operation__filterElemMatch({
+              fieldName: fieldName,
+              attrValues: conditionValue,
+            });
+            if (elemMatchConditions?.length) {
+              for (const _queryCondition of elemMatchConditions) {
+                orConditions.push(_queryCondition);
+              }
+            }
+          } else if (matchType === "query") {
+            const elemMatchConditions = this.operation__filterElemMatchObject({
+              fieldName: fieldName,
+              attrValues: conditionValue,
+            });
+            if (elemMatchConditions?.length) {
+              for (const _queryCondition of elemMatchConditions) {
+                orConditions.push(_queryCondition);
+              }
             }
           }
         } else if (conditionKey === "$not") {

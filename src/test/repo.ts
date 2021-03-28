@@ -11,11 +11,11 @@ export interface IPayment {
   invoiceId: string;
   transactionId?: string;
   remark: string;
+  bill?: { amount: number; date: string; remark: string };
 }
 
 // const query: IQueryDefinition<IPayment> = { amount: 0, category: "" };
 // if (query) {
-//
 // }
 
 const _searchTerm = "";
@@ -40,6 +40,11 @@ const schemaSubDef = {
   invoiceId: Joi.string().empty("").default(null).allow(null),
   transactionId: Joi.string().empty("").default(null).allow(null),
   remark: Joi.string().empty("").default(null).allow(null),
+  bill: Joi.object({
+    amount: Joi.number().min(1),
+    date: Joi.string().required(),
+    remark: Joi.string().required(),
+  }),
 };
 
 const getRandom = () =>
@@ -78,13 +83,17 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
       },
       query: {
         // category: "42406",
-        skills: {
+        // skills: {
+        //   $elemMatch: {
+        //     $in: [{ dp: 90 }] as any,
+        //   },
+        // },
+        bill: {
           $elemMatch: {
-            $in: [{ dp: 90 }] as any,
+            // amount: { $between: [25000, 40000] },
+            remark: { $beginsWith: "qu" },
           },
         },
-        // amount: { $gt: 80000 },
-        // $or: [{ amount: { $not: { $beginsWith: "null" } } }],
       },
     });
   }
@@ -107,6 +116,11 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
         remark: getRandom().toString(),
         transactionId: getRandom().toString(),
         invoiceId: getRandom().toString(),
+        bill: {
+          amount: getRandom(),
+          date: faker.date.between(new Date("2020-03-01"), new Date()).toISOString(),
+          remark: faker.random.word(),
+        },
       },
     });
   }

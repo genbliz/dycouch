@@ -28,9 +28,11 @@ export type IFuseQueryConditionParams<T = any> = IFuseKeyConditionParams<T> & {
   $notContains?: TypeFallBackStringOnly<T>;
   $exists?: boolean;
   $not?: IFuseKeyConditionParams<T>;
-  $elemMatch?: {
-    $in: TypeFallBackArray<T>;
-  };
+  $elemMatch?:
+    | {
+        $in: TypeFallBackArray<T>;
+      }
+    | QueryKeyConditionBasic<RequireAtLeastOne<T>>;
 };
 
 type QueryPartialAll<T> = {

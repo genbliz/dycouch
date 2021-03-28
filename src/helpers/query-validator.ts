@@ -42,12 +42,11 @@ class QueryValidatorCheckBase {
       this.queryErrorThrowChecks({ conditionValue, queryType: "$nin" });
     }
   }
-
-  elemMatch(conditionValue: { $in: any[] }) {
+  elemMatch_01(conditionValue: { $in: any[] }) {
     if (!(conditionValue && typeof conditionValue === "object")) {
       this.queryErrorThrowChecks({ conditionValue, queryType: "$elemMatch" });
     }
-    if (!(Array.isArray(conditionValue.$in) && conditionValue.$in.length)) {
+    if (!(conditionValue?.$in?.length && Array.isArray(conditionValue.$in))) {
       throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
         "$elemMatch must have a valid $in query and must be an array of non-zero length",
       );
@@ -60,6 +59,30 @@ class QueryValidatorCheckBase {
         );
       }
     }
+  }
+
+  elemMatch(conditionValue: { $in: any[] } | Record<string, any>) {
+    if (!(conditionValue && typeof conditionValue === "object")) {
+      this.queryErrorThrowChecks({ conditionValue, queryType: "$elemMatch" });
+    }
+    if (conditionValue?.$in?.length && Array.isArray(conditionValue.$in)) {
+      for (const item of conditionValue.$in) {
+        if (typeof item !== "number" && typeof item !== "string" && typeof item !== "boolean") {
+          throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+            "$in in $elemMatch MUST have values of string or number or boolean",
+          );
+        }
+      }
+      return "in";
+    }
+
+    if (Object.keys(conditionValue).length > 0) {
+      return "query";
+    }
+
+    throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+      "$elemMatch must have a valid $in query and must be an array of non-zero length or other equality query",
+    );
   }
 
   not_query(conditionValue: unknown) {
