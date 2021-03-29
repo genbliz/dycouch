@@ -277,7 +277,7 @@ export class CouchFilterQueryOperation {
             //
           } else if (conditionKey === "$beginsWith") {
             const result = {
-              [fieldName]: { $regex: `^${val}` },
+              [`${fieldName}.${subFieldName}`]: { $regex: `^${val}` },
             } as IQueryConditions;
             results.push(result);
           } else {
