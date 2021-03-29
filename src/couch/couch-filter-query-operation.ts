@@ -223,7 +223,7 @@ export class CouchFilterQueryOperation {
 
   private operation__filterBeginsWith({ fieldName, term }: { fieldName: string; term: any }): IQueryConditions {
     const result = {
-      [fieldName]: { $regex: `(?i)^${term}` },
+      [fieldName]: { $regex: `(?iw)${term}` },
     } as IQueryConditions;
     return result;
   }
@@ -277,7 +277,7 @@ export class CouchFilterQueryOperation {
             //
           } else if (conditionKey === "$beginsWith") {
             const result = {
-              [`${fieldName}.${subFieldName}`]: { $regex: `(?i)^${val}` },
+              [`${fieldName}.${subFieldName}`]: { $regex: `(?iw)${val}` },
             } as IQueryConditions;
             results.push(result);
           } else {
