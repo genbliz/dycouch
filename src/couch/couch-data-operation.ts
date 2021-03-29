@@ -442,9 +442,9 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const queryDefData = this._fuse_filterQueryOperation.processQueryFilter({ queryDefs });
 
-    const query01: any = {};
-    const query02: any = {};
-    const query03: any = {};
+    const query01: Record<string, any> = {};
+    const query02: Record<string, any> = {};
+    const query03: Record<string, any> = {};
 
     Object.entries(queryDefData).forEach(([key, val]) => {
       if (key === index_PartitionKeyFieldName) {
@@ -479,6 +479,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       use_index: paramOption.indexName,
       sort: sort01?.length ? sort01 : undefined,
       limit: paramOption?.pagingParams?.pageSize ?? undefined,
+      bookmark: paramOption?.pagingParams?.lastKeyHash,
     });
 
     const dataList = data?.docs?.map((item) => {
@@ -487,6 +488,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     return {
       mainResult: dataList,
+      lastKeyHash: data.bookmark,
     };
   }
 

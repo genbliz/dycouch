@@ -82,16 +82,17 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
         equals: this.featureEntityValue,
       },
       query: {
-        // category: "42406",
+        // category: { $eq: "" },
         // skills: {
         //   $elemMatch: {
-        //     $in: [{ dp: 90 }] as any,
+        //     $in: ["889"],
         //   },
         // },
+        // bill: { amount: 900 },
         bill: {
-          $elemMatch: {
-            // amount: { $between: [25000, 40000] },
-            remark: { $beginsWith: "qu" },
+          $nestedMatch: {
+            amount: { $between: [25000, 40000] },
+            // remark: { $beginsWith: "Data" },
           },
         },
       },

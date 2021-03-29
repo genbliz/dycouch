@@ -26,6 +26,7 @@ const conditionMapPre: FieldPartial<Omit<IFuseQueryConditionParams, keyof IFuseK
   $contains: "",
   $notContains: "",
   $elemMatch: "",
+  $nestedMatch: "",
 };
 
 const conditionMap = { ...keyConditionMap, ...conditionMapPre };
@@ -142,32 +143,74 @@ export class DynamoFilterQueryOperation {
     return result;
   }
 
-  private operation__filterElemMatchObject({
+  private operation__filterNestedMatchObject({
     fieldName,
     attrValues,
   }: {
     fieldName: string;
-    attrValues: Record<string, Record<string, any>>; // { product: {$eq: "xyz"} }
+    attrValues: Record<string, Record<string, any> | string | number>; // { product: {$eq: "xyz"} }
   }): IQueryConditions[] {
     const results: IQueryConditions[] = [];
     Object.entries(attrValues).forEach(([subFieldName, queryval]) => {
+      //
+      let _queryValue: Record<string, any>;
+
       if (queryval && typeof queryval === "object") {
-        Object.entries(queryval).forEach(([condKey, val]) => {
-          //
-          const conditionKey = condKey as keyof IFuseKeyConditionParams;
-          //
-          if (!Object.keys(keyConditionMap).includes(conditionKey)) {
-            throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
-              `Invalid query key: ${conditionKey} @ ElemMatchObject`,
-            );
-          }
-          const conditionExpr = keyConditionMap[conditionKey];
-          //
-          const attrValue = `:attr${getRandom()}`.toLowerCase();
-          const attrKeyHash = `#attrKey${subFieldName}${getRandom()}`.toLowerCase();
-          const parentFieldName = `#attrKey${fieldName}${getRandom()}`.toLowerCase();
-          //
-          if (conditionExpr) {
+        _queryValue = { ...queryval };
+      } else {
+        _queryValue = { $eq: queryval };
+      }
+
+      Object.entries(_queryValue).forEach(([condKey, val]) => {
+        //
+        const conditionKey = condKey as keyof IFuseKeyConditionParams;
+        //
+        if (!Object.keys(keyConditionMap).includes(conditionKey)) {
+          throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+            `Invalid query key: ${conditionKey} @ NestedMatchObject`,
+          );
+        }
+        const conditionExpr = keyConditionMap[conditionKey];
+        //
+        const attrValue = `:attr${getRandom()}`.toLowerCase();
+        const attrKeyHash = `#attrKey${subFieldName}${getRandom()}`.toLowerCase();
+        const parentFieldName = `#attrKey${fieldName}${getRandom()}`.toLowerCase();
+        //
+        if (conditionExpr) {
+          const result: IQueryConditions = {
+            xExpressionAttributeValues: {
+              [attrValue]: val,
+            },
+            xExpressionAttributeNames: {
+              [attrKeyHash]: subFieldName,
+              [parentFieldName]: fieldName,
+            },
+            xFilterExpression: [`${parentFieldName}.${attrKeyHash}`, conditionExpr, attrValue].join(" "),
+          };
+          results.push(result);
+        } else {
+          if (conditionKey === "$between") {
+            const fromKey = `:fromKey0${getRandom()}`.toLowerCase();
+            const toKey = `:toKey0${getRandom()}`.toLowerCase();
+            if (!(Array.isArray(val) && val.length === 2)) {
+              throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+                "$between query must be an array of length 2",
+              );
+            }
+            const [fromVal, toVal] = val;
+            const result: IQueryConditions = {
+              xExpressionAttributeValues: {
+                [fromKey]: fromVal,
+                [toKey]: toVal,
+              },
+              xExpressionAttributeNames: {
+                [attrKeyHash]: subFieldName,
+                [parentFieldName]: fieldName,
+              },
+              xFilterExpression: [`${parentFieldName}.${attrKeyHash}`, "between", fromKey, "and", toKey].join(" "),
+            };
+            results.push(result);
+          } else if (conditionKey === "$beginsWith") {
             const result: IQueryConditions = {
               xExpressionAttributeValues: {
                 [attrValue]: val,
@@ -176,46 +219,16 @@ export class DynamoFilterQueryOperation {
                 [attrKeyHash]: subFieldName,
                 [parentFieldName]: fieldName,
               },
-              xFilterExpression: [`${parentFieldName}.${attrKeyHash}`, conditionExpr, attrValue].join(" "),
+              xFilterExpression: `begins_with (${parentFieldName}.${attrKeyHash}, ${attrValue})`,
             };
             results.push(result);
           } else {
-            if (conditionKey === "$between") {
-              const fromKey = `:fromKey0${getRandom()}`.toLowerCase();
-              const toKey = `:toKey0${getRandom()}`.toLowerCase();
-              const [from, to] = val;
-              const result: IQueryConditions = {
-                xExpressionAttributeValues: {
-                  [fromKey]: from,
-                  [toKey]: to,
-                },
-                xExpressionAttributeNames: {
-                  [attrKeyHash]: subFieldName,
-                  [parentFieldName]: fieldName,
-                },
-                xFilterExpression: [`${parentFieldName}.${attrKeyHash}`, "between", fromKey, "and", toKey].join(" "),
-              };
-              results.push(result);
-            } else if (conditionKey === "$beginsWith") {
-              const result: IQueryConditions = {
-                xExpressionAttributeValues: {
-                  [attrValue]: val,
-                },
-                xExpressionAttributeNames: {
-                  [attrKeyHash]: subFieldName,
-                  [parentFieldName]: fieldName,
-                },
-                xFilterExpression: `begins_with (${parentFieldName}.${attrKeyHash}, ${attrValue})`,
-              };
-              results.push(result);
-            } else {
-              throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
-                `Query key: ${conditionKey} not currently supported`,
-              );
-            }
+            throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+              `Query key: ${conditionKey} not currently supported`,
+            );
           }
-        });
-      }
+        }
+      });
     });
     return results;
   }
@@ -378,26 +391,25 @@ export class DynamoFilterQueryOperation {
           _queryConditions.xFilterExpression = `NOT ${_queryConditions.xFilterExpression}`;
           queryConditions.push(_queryConditions);
         } else if (conditionKey === "$elemMatch") {
-          const matchType = QueryValidatorCheck.elemMatch(conditionValue);
-          if (matchType === "in") {
-            const elemMatchConditions = this.operation__filterElemMatch({
-              fieldName: fieldName,
-              attrValues: conditionValue,
-            });
-            if (elemMatchConditions?.length) {
-              for (const _queryCondition of elemMatchConditions) {
-                orConditions.push(_queryCondition);
-              }
+          QueryValidatorCheck.elemMatch(conditionValue);
+          const elemMatchConditions = this.operation__filterElemMatch({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          if (elemMatchConditions?.length) {
+            for (const _queryCondition of elemMatchConditions) {
+              orConditions.push(_queryCondition);
             }
-          } else if (matchType === "query") {
-            const elemMatchConditions = this.operation__filterElemMatchObject({
-              fieldName: fieldName,
-              attrValues: conditionValue,
-            });
-            if (elemMatchConditions?.length) {
-              for (const _queryCondition of elemMatchConditions) {
-                orConditions.push(_queryCondition);
-              }
+          }
+        } else if (conditionKey === "$nestedMatch") {
+          QueryValidatorCheck.nestedMatch(conditionValue);
+          const nestedMatchConditions = this.operation__filterNestedMatchObject({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          if (nestedMatchConditions?.length) {
+            for (const _queryCondition of nestedMatchConditions) {
+              queryConditions.push(_queryCondition);
             }
           }
         } else if (conditionKey === "$not") {

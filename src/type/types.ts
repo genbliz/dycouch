@@ -16,6 +16,7 @@ export type IFuseKeyConditionParams<T = string> = {
   $gte?: TypeFallBack<T>;
   $lt?: TypeFallBack<T>;
   $lte?: TypeFallBack<T>;
+  //
   $between?: [TypeFallBack<T>, TypeFallBack<T>];
   $beginsWith?: TypeFallBackStringOnly<T>;
 };
@@ -24,15 +25,13 @@ export type IFuseQueryConditionParams<T = any> = IFuseKeyConditionParams<T> & {
   $ne?: TypeFallBack<T>;
   $in?: TypeFallBackArray<T>;
   $nin?: TypeFallBackArray<T>;
-  $contains?: TypeFallBackStringOnly<T>;
-  $notContains?: TypeFallBackStringOnly<T>;
   $exists?: boolean;
   $not?: IFuseKeyConditionParams<T>;
-  $elemMatch?:
-    | {
-        $in: TypeFallBackArray<T>;
-      }
-    | QueryKeyConditionBasic<RequireAtLeastOne<T>>;
+  $elemMatch?: { $in: TypeFallBackArray<T> };
+  //
+  $contains?: TypeFallBackStringOnly<T>;
+  $notContains?: TypeFallBackStringOnly<T>;
+  $nestedMatch?: QueryKeyConditionBasic<RequireAtLeastOne<T>>;
 };
 
 type QueryPartialAll<T> = {

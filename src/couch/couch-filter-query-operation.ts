@@ -1,3 +1,4 @@
+import { FuseErrorUtilsService } from "../helpers/errors";
 import { QueryValidatorCheck } from "../helpers/query-validator";
 import type { IFuseKeyConditionParams, IFuseQueryConditionParams, IFuseQueryDefinition } from "../type/types";
 // https://docs.couchdb.org/en/latest/api/database/find.html
@@ -38,6 +39,7 @@ const conditionMapPre: FieldPartial<Omit<IFuseQueryConditionParams, keyof IFuseK
   $contains: "",
   $notContains: "",
   $elemMatch: "",
+  $nestedMatch: "",
 };
 
 const conditionMap = { ...keyConditionMap, ...conditionMapPre };
@@ -226,6 +228,69 @@ export class CouchFilterQueryOperation {
     return result;
   }
 
+  private operation__filterNestedMatchObject({
+    fieldName,
+    attrValues,
+  }: {
+    fieldName: string;
+    attrValues: Record<string, Record<string, any> | string | number>; // { product: {$eq: "xyz"} }
+  }): IQueryConditions[] {
+    const results: IQueryConditions[] = [];
+    Object.entries(attrValues).forEach(([subFieldName, queryval]) => {
+      //
+      let _queryValue: Record<string, any>;
+
+      if (queryval && typeof queryval === "object") {
+        _queryValue = { ...queryval };
+      } else {
+        _queryValue = { $eq: queryval };
+      }
+
+      Object.entries(_queryValue).forEach(([condKey, val]) => {
+        //
+        const conditionKey = condKey as keyof IFuseKeyConditionParams;
+        //
+        if (!Object.keys(keyConditionMap).includes(conditionKey)) {
+          throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+            `Invalid query key: ${conditionKey} @ NestedMatchObject`,
+          );
+        }
+        const conditionExpr = keyConditionMap[conditionKey];
+
+        if (conditionExpr) {
+          const result = {
+            [`${fieldName}.${subFieldName}`]: { [conditionExpr]: val },
+          } as IQueryConditions;
+          results.push(result);
+        } else {
+          if (conditionKey === "$between") {
+            if (!(Array.isArray(val) && val.length === 2)) {
+              throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+                "$between query must be an array of length 2",
+              );
+            }
+            const [fromVal, toVal] = val;
+            const result = {
+              [`${fieldName}.${subFieldName}`]: { $gte: fromVal, $lte: toVal },
+            } as IQueryConditions;
+            results.push(result);
+            //
+          } else if (conditionKey === "$beginsWith") {
+            const result = {
+              [fieldName]: { $regex: `^${val}` },
+            } as IQueryConditions;
+            results.push(result);
+          } else {
+            throw FuseErrorUtilsService.fuse_helper_createFriendlyError(
+              `Query key: ${conditionKey} not currently supported`,
+            );
+          }
+        }
+      });
+    });
+    return results;
+  }
+
   private operation__translateAdvancedQueryOperation({
     fieldName,
     queryObject,
@@ -287,6 +352,17 @@ export class CouchFilterQueryOperation {
             attrValues: conditionValue,
           });
           queryConditions.push(_queryConditions);
+        } else if (conditionKey === "$nestedMatch") {
+          QueryValidatorCheck.nestedMatch(conditionValue);
+          const nestedMatchConditions = this.operation__filterNestedMatchObject({
+            fieldName: fieldName,
+            attrValues: conditionValue,
+          });
+          if (nestedMatchConditions?.length) {
+            for (const _queryCondition of nestedMatchConditions) {
+              queryConditions.push(_queryCondition);
+            }
+          }
         } else if (conditionKey === "$not") {
           QueryValidatorCheck.not_query(conditionValue);
           if (conditionValue && typeof conditionValue === "object") {
