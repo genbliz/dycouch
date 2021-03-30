@@ -64,7 +64,7 @@ function getQueryConditionExpression(key: string): string | null {
 }
 
 function regex_pcre_beginWith(text: string) {
-  return `(?i)\A${text}`;
+  return `(?i)\\A${text}`;
 }
 
 function regex_pcre_contain(text: string) {
