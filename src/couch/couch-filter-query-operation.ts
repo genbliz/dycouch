@@ -63,6 +63,14 @@ function getQueryConditionExpression(key: string): string | null {
   return null;
 }
 
+function regex_pcre_beginWith(text: string) {
+  return `(?i)\A${text}`;
+}
+
+function regex_pcre_contain(text: string) {
+  return `(?i)${text}`;
+}
+
 export class CouchFilterQueryOperation {
   private operation__filterFieldExist({ fieldName }: { fieldName: string }): IQueryConditions {
     const result = {
@@ -194,14 +202,14 @@ export class CouchFilterQueryOperation {
 
   private operation__filterContains({ fieldName, term }: { fieldName: string; term: string }): IQueryConditions {
     const result = {
-      [fieldName]: { $regex: `(?i)${term}` },
+      [fieldName]: { $regex: regex_pcre_contain(term) },
     } as IQueryConditions;
     return result;
   }
 
   private operation__filterNotContains({ fieldName, term }: { fieldName: string; term: string }): IQueryConditions {
     const result = {
-      [fieldName]: { $not: { $regex: `(?i)${term}` } },
+      [fieldName]: { $not: { $regex: regex_pcre_contain(term) } },
     } as IQueryConditions;
     return result;
   }
@@ -223,7 +231,7 @@ export class CouchFilterQueryOperation {
 
   private operation__filterBeginsWith({ fieldName, term }: { fieldName: string; term: any }): IQueryConditions {
     const result = {
-      [fieldName]: { $regex: `^((?i)${term})` },
+      [fieldName]: { $regex: regex_pcre_beginWith(term) },
     } as IQueryConditions;
     return result;
   }
@@ -277,7 +285,7 @@ export class CouchFilterQueryOperation {
             //
           } else if (conditionKey === "$beginsWith") {
             const result = {
-              [`${fieldName}.${subFieldName}`]: { $regex: `^((?i)${val})` },
+              [`${fieldName}.${subFieldName}`]: { $regex: regex_pcre_beginWith(val) },
             } as IQueryConditions;
             results.push(result);
           } else {
