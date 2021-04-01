@@ -11,7 +11,7 @@ type TypeFallBackArray<T> = number extends T ? number[] : string extends T ? str
 
 export type IFuseKeyConditionParams<T = string> = {
   // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LegacyConditionalParameters.KeyConditions.html
-  $eq?: TypeFallBack<T>;
+  $eq?: TypeFallBack<T> | null;
   $gt?: TypeFallBack<T>;
   $gte?: TypeFallBack<T>;
   $lt?: TypeFallBack<T>;
@@ -22,7 +22,7 @@ export type IFuseKeyConditionParams<T = string> = {
 };
 
 export type IFuseQueryConditionParams<T = any> = IFuseKeyConditionParams<T> & {
-  $ne?: TypeFallBack<T>;
+  $ne?: TypeFallBack<T> | null;
   $in?: TypeFallBackArray<T>;
   $nin?: TypeFallBackArray<T>;
   $exists?: boolean;

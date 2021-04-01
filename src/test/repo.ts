@@ -82,7 +82,7 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
         equals: this.featureEntityValue,
       },
       query: {
-        // category: { $eq: "" },
+        category: { $eq: null },
         // skills: {
         //   $elemMatch: {
         //     $in: ["889"],
