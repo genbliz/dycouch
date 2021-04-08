@@ -32,7 +32,7 @@ export abstract class RepoModel<T> {
   }): Promise<T>;
 
   protected abstract fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
-    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+    paramOption: Omit<IFuseQueryIndexOptions<TData, TSortKeyField>, "pagingParams">,
   ): Promise<T[]>;
 
   protected abstract fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(

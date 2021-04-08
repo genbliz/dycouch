@@ -1,6 +1,5 @@
 export type {
   IFuseQueryIndexOptions,
-  IFuseQueryParamOptions,
   IFuseIndexDefinition,
   IFuseFieldCondition,
   IFuseKeyConditionParams,

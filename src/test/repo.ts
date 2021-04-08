@@ -78,9 +78,7 @@ class MyRepositoryBase extends BaseRepository<IPayment> {
   async getIt() {
     return await this.fuse_getManyBySecondaryIndex({
       indexName: DefinedIndexes.featureEntity_tenantId.indexName,
-      partitionKeyQuery: {
-        equals: this.featureEntityValue,
-      },
+      partitionKeyValue: this.featureEntityValue,
       query: {
         category: { $eq: null },
         // skills: {

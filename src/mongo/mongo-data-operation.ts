@@ -65,7 +65,10 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     this._fuse_errorHelper = new FuseErrorUtils();
     this._fuse_entityResultFieldKeysMap = new Map();
 
-    const fullSchemaMapDef = { ...schemaDef, ...coreSchemaDefinition };
+    const fullSchemaMapDef = {
+      ...schemaDef,
+      ...coreSchemaDefinition,
+    };
 
     Object.keys(fullSchemaMapDef).forEach((key) => {
       this._fuse_entityResultFieldKeysMap.set(key, key);
@@ -234,11 +237,31 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const db = await this._fuse_getDbInstance();
 
+    if (withCondition?.length && fields?.length) {
+      withCondition.forEach((item) => {
+        fields.push(item.field);
+      });
+    }
+
     const projection = this._fuse_toMongoProjection(fields) ?? { _id: -1 };
 
     const query: any = { _id: { $in: fullUniqueIds } };
 
-    return await db.find(query, { projection: projection }).toArray();
+    const dataListInDb = await db.find(query, { projection: projection }).toArray();
+
+    if (!dataListInDb?.length) {
+      return [];
+    }
+
+    if (withCondition?.length) {
+      const dataFiltered = dataListInDb.filter((item) => {
+        const passed = this._fuse_withConditionPassed({ item, withCondition });
+        return passed;
+      });
+      return dataFiltered;
+    }
+
+    return dataListInDb;
   }
 
   async fuse_createOne({ data }: { data: T }): Promise<T> {
@@ -364,17 +387,21 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
           ...{ [index_SortKeyFieldName]: paramOption.sortKeyQuery },
-          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyValue },
         }
-      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyValue };
 
     const localVariables = this._fuse_getLocalVariables();
+
     /** Avoid query data leak */
     const hasFeatureEntity = [
       //
       index_PartitionKeyFieldName,
       index_SortKeyFieldName,
     ].includes(localVariables.sortKeyFieldName);
+
+    paramOption.query = (paramOption.query || {}) as any;
+
     if (!hasFeatureEntity) {
       paramOption.query = {
         ...paramOption.query,
@@ -386,7 +413,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       }
     }
 
-    const queryDefs = {
+    const queryDefs: any = {
       ...paramOption.query,
       ...partitionSortKeyQuery,
     };
@@ -399,7 +426,7 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
     const sort01: Array<[string, number]> = [];
 
-    if (paramOption?.pagingParams?.orderDesc) {
+    if (paramOption.sort === "desc") {
       sort01.push([index_PartitionKeyFieldName, -1]);
       sort01.push([index_SortKeyFieldName, -1]);
     } else {
@@ -411,12 +438,13 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       .find(queryDefData, {
         projection,
         sort: sort01.length ? sort01 : undefined,
-        limit: paramOption?.pagingParams?.pageSize ?? undefined,
+        limit: paramOption.limit ? Number(paramOption.limit) : undefined,
       })
       .toArray();
 
     return {
       mainResult: results,
+      lastKeyHash: undefined,
     };
   }
 

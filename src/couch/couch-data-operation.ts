@@ -413,17 +413,21 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
           ...{ [index_SortKeyFieldName]: paramOption.sortKeyQuery },
-          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyValue },
         }
-      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyValue };
 
     const localVariables = this._fuse_getLocalVariables();
+
     /** Avoid query data leak */
     const hasFeatureEntity = [
       //
       index_PartitionKeyFieldName,
       index_SortKeyFieldName,
     ].includes(localVariables.sortKeyFieldName);
+
+    paramOption.query = (paramOption.query || {}) as any;
+
     if (!hasFeatureEntity) {
       paramOption.query = {
         ...paramOption.query,
@@ -459,7 +463,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
     const queryDefDataOrdered = { ...query01, ...query02, ...query03 };
     const sort01: Array<{ [propName: string]: "asc" | "desc" }> = [];
 
-    if (paramOption?.pagingParams?.orderDesc) {
+    if (paramOption.sort === "desc") {
       sort01.push({ [index_PartitionKeyFieldName]: "desc" });
       sort01.push({ [index_SortKeyFieldName]: "desc" });
     } else {
@@ -478,7 +482,7 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       fields: paramOption?.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields as any) : undefined,
       use_index: paramOption.indexName,
       sort: sort01?.length ? sort01 : undefined,
-      limit: paramOption?.pagingParams?.pageSize ?? undefined,
+      limit: paramOption.limit ? Number(paramOption.limit) : undefined,
       bookmark: paramOption?.pagingParams?.lastKeyHash,
     });
 

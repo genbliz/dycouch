@@ -43,16 +43,16 @@ type QueryKeyConditionBasic<T> = {
 };
 
 export interface IFusePagingResult<T> {
-  lastKeyHash?: any;
+  lastKeyHash: string | undefined;
   mainResult: T;
-  count?: number;
+  // count: number | undefined;
 }
 
 export type IFusePagingParams = {
   evaluationLimit?: number;
-  pageSize?: number;
-  lastKeyHash?: any;
-  orderDesc?: boolean;
+  // pageSize?: number;
+  lastKeyHash?: string;
+  // orderDesc?: boolean;
 };
 
 type IQueryDefOr<T> = { $or?: QueryPartialAll<RequireAtLeastOne<T>>[] };
@@ -60,21 +60,27 @@ type IQueryDefAnd<T> = { $and?: QueryPartialAll<RequireAtLeastOne<T>>[] };
 
 export type IFuseQueryDefinition<T> = QueryPartialAll<RequireAtLeastOne<T & IQueryDefOr<T> & IQueryDefAnd<T>>>;
 
+/*
 export interface IFuseQueryParamOptions<T, ISortKeyObjField = any> {
+  partitionKeyValue: string | number;
+  sortKeyQuery?: QueryKeyConditionBasic<Required<ISortKeyObjField>>;
   query?: IFuseQueryDefinition<T>;
   fields?: (keyof T)[];
-  partitionKeyQuery: { equals: string | number };
-  sortKeyQuery?: QueryKeyConditionBasic<Required<ISortKeyObjField>>;
   pagingParams?: IFusePagingParams;
+  limit?: number | null;
+  sort?: "asc" | "desc" | null;
 }
+*/
 
 export interface IFuseQueryIndexOptions<T, TSortKeyField = string> {
   indexName: string;
-  partitionKeyQuery: { equals: string | number };
+  partitionKeyValue: string | number;
   sortKeyQuery?: IFuseKeyConditionParams<TSortKeyField>;
   query?: IFuseQueryDefinition<T>;
   fields?: (keyof T)[];
   pagingParams?: IFusePagingParams;
+  limit?: number | null;
+  sort?: "asc" | "desc" | null;
 }
 
 export interface IFuseIndexDefinition<T> {

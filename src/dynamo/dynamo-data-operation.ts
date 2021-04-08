@@ -597,6 +597,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     if (!secondaryIndexOptions?.length) {
       throw this._fuse_createGenericError("Invalid secondary index definitions");
     }
+
     if (!paramOption?.indexName) {
       throw this._fuse_createGenericError("Invalid index name input");
     }
@@ -615,9 +616,9 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
     const partitionSortKeyQuery = paramOption.sortKeyQuery
       ? {
           ...{ [index_SortKeyFieldName]: paramOption.sortKeyQuery },
-          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals },
+          ...{ [index_PartitionKeyFieldName]: paramOption.partitionKeyValue },
         }
-      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyQuery.equals };
+      : { [index_PartitionKeyFieldName]: paramOption.partitionKeyValue };
 
     const fieldKeys = paramOption.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields) : undefined;
 
@@ -629,7 +630,10 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       index_PartitionKeyFieldName,
       index_SortKeyFieldName,
     ].includes(localVariables.sortKeyFieldName);
+
     if (!hasFeatureEntity) {
+      paramOption.query = (paramOption.query || {}) as any;
+
       paramOption.query = {
         ...paramOption.query,
         ...this._fuse_featureEntity_Key_Value,
@@ -678,24 +682,28 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       },
     };
 
-    const orderDesc = paramOption.pagingParams?.orderDesc === true;
+    const orderDesc = paramOption?.sort === "desc";
 
     if (orderDesc) {
       params.ScanIndexForward = false;
+    } else {
+      params.ScanIndexForward = true;
     }
 
     if (mainFilter.projectionExpressionAttr) {
       params.ProjectionExpression = mainFilter.projectionExpressionAttr;
     }
 
-    const hashKeyAndSortKey: [string, string] = [index_PartitionKeyFieldName, index_SortKeyFieldName];
+    const partitionAndSortKey: [string, string] = [index_PartitionKeyFieldName, index_SortKeyFieldName];
 
     const result = await this._fuse_queryScanProcessor.fuse__helperDynamoQueryProcessor<T>({
       dynamoDb: () => this._fuse_dynamoDbInstance(),
       params,
       orderDesc,
-      hashKeyAndSortKey,
-      ...(paramOption.pagingParams || {}),
+      partitionAndSortKey,
+      evaluationLimit: paramOption.pagingParams?.evaluationLimit,
+      lastKeyHash: paramOption.pagingParams?.lastKeyHash,
+      pageSize: paramOption.limit ? Number(paramOption.limit) : undefined,
     });
     return result;
   }
@@ -709,6 +717,7 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
   }): Promise<T> {
     //
     this._fuse_errorHelper.fuse_helper_validateRequiredString({ Del1SortKey: dataId });
+
     const {
       tableFullName,
       partitionKeyFieldName,
