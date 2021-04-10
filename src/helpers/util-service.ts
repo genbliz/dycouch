@@ -25,8 +25,7 @@ class UtilServiceBase {
 
   getRandomString(count: number) {
     let text = "";
-    const possible =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     for (let i = 0; i < count; i++) {
       const random = Math.floor(Math.random() * possible.length);
       text += possible[random];
@@ -127,6 +126,18 @@ class UtilServiceBase {
       uuidv4(),
     ];
     return key.join("");
+  }
+
+  encodeStringToBase64(str: string) {
+    return Buffer.from(str).toString("base64");
+  }
+
+  decodeStringFromBase64(str: string) {
+    return Buffer.from(str, "base64").toString();
+  }
+
+  isNumberic(val: any) {
+    return !isNaN(Number(val));
   }
 }
 

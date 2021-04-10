@@ -1,9 +1,11 @@
-// import { LoggingService } from "./../helpers/logging-service";
+import { UtilService } from "./../helpers/util-service";
+import { LoggingService } from "./../helpers/logging-service";
 import type {
   IFuseFieldCondition,
   IFuseIndexDefinition,
   IFusePagingResult,
   IFuseQueryIndexOptions,
+  IFuseQueryIndexOptionsNoPaging,
 } from "../type/types";
 import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
@@ -350,18 +352,24 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   }
 
   async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
-    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+    paramOption: IFuseQueryIndexOptionsNoPaging<TData, TSortKeyField>,
   ): Promise<T[]> {
-    paramOption.pagingParams = undefined;
-    const result = await this.fuse_getManyBySecondaryIndexPaginate(paramOption);
+    const result = await this._fuse_getManyBySecondaryIndexPaginateBase<TData, TSortKeyField>(paramOption, false);
     if (result?.mainResult) {
       return result.mainResult;
     }
     return [];
   }
 
-  async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
+  fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+  ): Promise<IFusePagingResult<T[]>> {
+    return this._fuse_getManyBySecondaryIndexPaginateBase<TData, TSortKeyField>(paramOption, true);
+  }
+
+  private async _fuse_getManyBySecondaryIndexPaginateBase<TData = T, TSortKeyField = string>(
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+    canPaginate: boolean,
   ): Promise<IFusePagingResult<T[]>> {
     const { secondaryIndexOptions } = this._fuse_getLocalVariables();
 
@@ -434,17 +442,85 @@ export class MongoDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       sort01.push([index_SortKeyFieldName, 1]);
     }
 
-    const results = await db
-      .find(queryDefData, {
-        projection,
-        sort: sort01.length ? sort01 : undefined,
-        limit: paramOption.limit ? Number(paramOption.limit) : undefined,
-      })
-      .toArray();
+    // const nn = db.find(queryDefData, {
+    //   projection,
+    //   sort: sort01.length ? sort01 : undefined,
+    //   limit: paramOption.limit ? Number(paramOption.limit) : undefined,
+    // });
+
+    const cursorFind = db.find(queryDefData);
+
+    if (sort01?.length) {
+      cursorFind.sort(sort01);
+    }
+
+    if (projection) {
+      cursorFind.project(projection);
+    }
+
+    let nextPageHash: string | undefined = undefined;
+
+    type IPaging = {
+      pageNo: number;
+      limit: number;
+    };
+
+    const pagingOptions: IPaging = {
+      pageNo: 0,
+      limit: 50,
+    };
+
+    if (canPaginate) {
+      if (paramOption.limit && UtilService.isNumberic(paramOption.limit)) {
+        pagingOptions.limit = Number(paramOption.limit);
+      }
+
+      try {
+        const nextPageHash01 = paramOption?.pagingParams?.nextPageHash;
+        if (nextPageHash01) {
+          const param01: IPaging = JSON.parse(UtilService.decodeStringFromBase64(nextPageHash01));
+          if (param01.limit) {
+            pagingOptions.limit = param01.limit;
+          }
+          if (param01.pageNo) {
+            pagingOptions.pageNo = param01.pageNo;
+          }
+        }
+      } catch (error) {
+        LoggingService.log(error?.message);
+      }
+      cursorFind.limit(pagingOptions.limit);
+      //
+      const skipValue = pagingOptions.limit * (pagingOptions.pageNo || 0);
+      //
+      if (skipValue) {
+        cursorFind.skip(skipValue);
+      }
+    } else {
+      if (paramOption.limit && UtilService.isNumberic(paramOption.limit)) {
+        cursorFind.limit(Number(paramOption.limit));
+      }
+    }
+
+    const results = await cursorFind.hint(paramOption.indexName).toArray();
+
+    if (canPaginate && results.length && results.length >= pagingOptions.limit) {
+      pagingOptions.pageNo = pagingOptions.pageNo + 1;
+      nextPageHash = UtilService.encodeStringToBase64(JSON.stringify(pagingOptions));
+    }
+
+    // const results = await db
+    //   .find(queryDefData, {
+    //     projection,
+    //     sort: sort01.length ? sort01 : undefined,
+    //     limit: paramOption.limit ? Number(paramOption.limit) : undefined,
+    //   })
+    //   .hint(paramOption.indexName)
+    //   .toArray();
 
     return {
       mainResult: results,
-      lastKeyHash: undefined,
+      nextPageHash: nextPageHash,
     };
   }
 

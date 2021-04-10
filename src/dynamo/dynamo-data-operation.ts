@@ -1,6 +1,13 @@
+import { UtilService } from "./../helpers/util-service";
 import { FuseUtil } from "./../helpers/fuse-utils";
 import { RepoModel } from "../model/repo-model";
-import type { IFuseIndexDefinition, IFuseFieldCondition, IFuseQueryIndexOptions } from "../type/types";
+import type {
+  IFuseIndexDefinition,
+  IFuseFieldCondition,
+  IFuseQueryIndexOptions,
+  IFusePagingResult,
+  IFuseQueryIndexOptionsNoPaging,
+} from "../type/types";
 import { FuseErrorUtils, FuseGenericError } from "./../helpers/errors";
 import type {
   DynamoDB,
@@ -579,10 +586,9 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
   }
 
   async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
-    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
-  ) {
-    paramOption.pagingParams = undefined;
-    const result = await this.fuse_getManyBySecondaryIndexPaginate<TData, TSortKeyField>(paramOption);
+    paramOption: IFuseQueryIndexOptionsNoPaging<TData, TSortKeyField>,
+  ): Promise<T[]> {
+    const result = await this._fuse_getManyBySecondaryIndexPaginateBase<TData, TSortKeyField>(paramOption, false);
     if (result?.mainResult) {
       return result.mainResult;
     }
@@ -591,7 +597,14 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
 
   async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
-  ) {
+  ): Promise<IFusePagingResult<T[]>> {
+    return this._fuse_getManyBySecondaryIndexPaginateBase<TData, TSortKeyField>(paramOption, true);
+  }
+
+  private async _fuse_getManyBySecondaryIndexPaginateBase<TData = T, TSortKeyField = string>(
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+    canPaginate: boolean,
+  ): Promise<IFusePagingResult<T[]>> {
     const { tableFullName, secondaryIndexOptions } = this._fuse_getLocalVariables();
 
     if (!secondaryIndexOptions?.length) {
@@ -702,8 +715,9 @@ export class DynamoDataOperation<T> extends RepoModel<T> implements RepoModel<T>
       orderDesc,
       partitionAndSortKey,
       evaluationLimit: paramOption.pagingParams?.evaluationLimit,
-      lastKeyHash: paramOption.pagingParams?.lastKeyHash,
-      pageSize: paramOption.limit ? Number(paramOption.limit) : undefined,
+      nextPageHash: paramOption.pagingParams?.nextPageHash,
+      resultLimit: UtilService.isNumberic(paramOption.limit) ? Number(paramOption.limit) : undefined,
+      canPaginate,
     });
     return result;
   }

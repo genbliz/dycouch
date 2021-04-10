@@ -7,6 +7,7 @@ export type {
   IFuseQueryConditionParams,
   IFusePagingResult,
   IFuseQueryDefinition,
+  IFuseQueryIndexOptionsNoPaging,
 } from "./type/types";
 
 export { IFuseCoreEntityModel } from "./core/base-schema";

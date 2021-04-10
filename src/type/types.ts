@@ -43,16 +43,14 @@ type QueryKeyConditionBasic<T> = {
 };
 
 export interface IFusePagingResult<T> {
-  lastKeyHash: string | undefined;
+  nextPageHash: string | undefined;
   mainResult: T;
   // count: number | undefined;
 }
 
 export type IFusePagingParams = {
   evaluationLimit?: number;
-  // pageSize?: number;
-  lastKeyHash?: string;
-  // orderDesc?: boolean;
+  nextPageHash?: string;
 };
 
 type IQueryDefOr<T> = { $or?: QueryPartialAll<RequireAtLeastOne<T>>[] };
@@ -82,6 +80,11 @@ export interface IFuseQueryIndexOptions<T, TSortKeyField = string> {
   limit?: number | null;
   sort?: "asc" | "desc" | null;
 }
+
+export type IFuseQueryIndexOptionsNoPaging<T, TSortKeyField = string> = Omit<
+  IFuseQueryIndexOptions<T, TSortKeyField>,
+  "pagingParams"
+>;
 
 export interface IFuseIndexDefinition<T> {
   indexName: string;

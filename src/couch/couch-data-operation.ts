@@ -5,6 +5,7 @@ import type {
   IFuseIndexDefinition,
   IFusePagingResult,
   IFuseQueryIndexOptions,
+  IFuseQueryIndexOptionsNoPaging,
 } from "../type/types";
 import { RepoModel } from "../model/repo-model";
 import Joi from "joi";
@@ -376,11 +377,10 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
   }
 
   async fuse_getManyBySecondaryIndex<TData = T, TSortKeyField = string>(
-    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+    paramOption: IFuseQueryIndexOptionsNoPaging<TData, TSortKeyField>,
   ): Promise<T[]> {
-    paramOption.pagingParams = undefined;
-    const result = await this.fuse_getManyBySecondaryIndexPaginate(paramOption);
-    if (result?.mainResult) {
+    const result = await this._fuse_getManyBySecondaryIndexPaginateBase<TData, TSortKeyField>(paramOption, false);
+    if (result?.mainResult?.length) {
       return result.mainResult;
     }
     return [];
@@ -388,6 +388,13 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
 
   async fuse_getManyBySecondaryIndexPaginate<TData = T, TSortKeyField = string>(
     paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+  ): Promise<IFusePagingResult<T[]>> {
+    return this._fuse_getManyBySecondaryIndexPaginateBase<TData, TSortKeyField>(paramOption, true);
+  }
+
+  private async _fuse_getManyBySecondaryIndexPaginateBase<TData = T, TSortKeyField = string>(
+    paramOption: IFuseQueryIndexOptions<TData, TSortKeyField>,
+    canPaginate: boolean,
   ): Promise<IFusePagingResult<T[]>> {
     const { secondaryIndexOptions } = this._fuse_getLocalVariables();
 
@@ -477,22 +484,88 @@ export class CouchDataOperation<T> extends RepoModel<T> implements RepoModel<T> 
       paramOption,
     });
 
+    let projection: string[] | undefined = undefined;
+
+    if (paramOption?.fields?.length) {
+      projection = this._fuse_removeDuplicateString(paramOption.fields as any);
+    }
+
+    let nextPageHash: string | undefined = undefined;
+
+    type IPaging = {
+      pageNo: number;
+      limit: number;
+    };
+
+    type IMoreFindOption = {
+      skip: number | undefined;
+      limit: number | undefined;
+    };
+
+    const pagingOptions: IPaging = {
+      pageNo: 0,
+      limit: 50,
+    };
+
+    const moreFindOption: IMoreFindOption = {
+      limit: undefined,
+      skip: undefined,
+    };
+
+    if (canPaginate) {
+      if (paramOption.limit && UtilService.isNumberic(paramOption.limit)) {
+        pagingOptions.limit = Number(paramOption.limit);
+      }
+
+      try {
+        const nextPageHash01 = paramOption?.pagingParams?.nextPageHash;
+        if (nextPageHash01) {
+          const param01: IPaging = JSON.parse(UtilService.decodeStringFromBase64(nextPageHash01));
+          if (param01.limit) {
+            pagingOptions.limit = param01.limit;
+          }
+          if (param01.pageNo) {
+            pagingOptions.pageNo = param01.pageNo;
+          }
+        }
+      } catch (error) {
+        LoggingService.log(error?.message);
+      }
+      moreFindOption.limit = pagingOptions.limit;
+      //
+      const skipValue = pagingOptions.limit * (pagingOptions.pageNo || 0);
+      //
+      if (skipValue) {
+        moreFindOption.skip = skipValue;
+      }
+    } else {
+      if (paramOption.limit && UtilService.isNumberic(paramOption.limit)) {
+        moreFindOption.limit = Number(paramOption.limit);
+      }
+    }
+
     const data = await this._fuse_couchDbInstance().partitionedFind(this._fuse_featureEntityValue, {
       selector: { ...queryDefDataOrdered },
-      fields: paramOption?.fields?.length ? this._fuse_removeDuplicateString(paramOption.fields as any) : undefined,
+      fields: projection,
       use_index: paramOption.indexName,
       sort: sort01?.length ? sort01 : undefined,
-      limit: paramOption.limit ? Number(paramOption.limit) : undefined,
-      bookmark: paramOption?.pagingParams?.lastKeyHash,
+      limit: moreFindOption.limit,
+      skip: moreFindOption.skip,
+      // bookmark: paramOption?.pagingParams?.nextPageHash,
     });
 
-    const dataList = data?.docs?.map((item) => {
+    const results = data?.docs?.map((item) => {
       return this._fuse_stripNonRequiredOutputData({ dataObj: item });
     });
 
+    if (canPaginate && results.length && moreFindOption.limit && results.length >= moreFindOption.limit) {
+      pagingOptions.pageNo = pagingOptions.pageNo + 1;
+      nextPageHash = UtilService.encodeStringToBase64(JSON.stringify(pagingOptions));
+    }
+
     return {
-      mainResult: dataList,
-      lastKeyHash: data.bookmark,
+      mainResult: results,
+      nextPageHash: nextPageHash,
     };
   }
 

@@ -11,8 +11,12 @@ class LoggingServiceBase {
   }
 
   log(message: any, ...optionalParams: any[]) {
-    if (this.mode) {
-      console.log(message, optionalParams);
+    try {
+      if (this.mode) {
+        console.log(message, optionalParams);
+      }
+    } catch (error) {
+      //
     }
   }
 }
